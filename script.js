@@ -1,47 +1,70 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // Set the workerSrc for pdf.js to avoid deprecated API usage warning
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.7.107/pdf.worker.min.js";
+    const generateBtn = document.getElementById("generateBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const invoicePreview = document.getElementById("invoicePreview");
   
-    document.getElementById('generateBtn').addEventListener('click', function() {
-      // Get invoice form values
-      const invoiceNumber = document.getElementById('invoiceNumber').value;
-      const customerName = document.getElementById('customerName').value;
-      const amount = document.getElementById('amount').value;
+    // Check that required elements exist before attaching events.
+    if (!generateBtn) {
+      console.error('Element with id "generateBtn" not found.');
+      return;
+    }
+    if (!downloadBtn) {
+      console.error('Element with id "downloadBtn" not found.');
+      return;
+    }
+    if (!invoicePreview) {
+      console.error('Element with id "invoicePreview" not found.');
+      return;
+    }
   
-      // Specify the PDF template file URL.
-      // Make sure invoice_template.pdf is available in the same directory or adjust the path accordingly.
-      const pdfUrl = 'invoice_template.pdf';
+    generateBtn.addEventListener("click", function() {
+      // Get all form values
+      const company = document.getElementById("company").value;
+      const address = document.getElementById("address").value;
+      const invoiceNumber = document.getElementById("invoiceNumber").value;
+      const date = document.getElementById("date").value;
+      const services = document.getElementById("services").value;
+      const receiverName = document.getElementById("receiverName").value;
+      const gst = document.getElementById("gst").value;
+      const abn = document.getElementById("abn").value;
   
-      // Load the PDF template using PDF.js
-      const loadingTask = pdfjsLib.getDocument(pdfUrl);
-      loadingTask.promise.then(function(pdf) {
-          // Get the first page of the PDF template
-          pdf.getPage(1).then(function(page) {
-              const scale = 1.5;
-              const viewport = page.getViewport({ scale: scale });
-              const canvas = document.getElementById('pdfCanvas');
-              const context = canvas.getContext('2d');
-              canvas.height = viewport.height;
-              canvas.width = viewport.width;
+      // Generate invoice preview HTML with logo on the top right and details below
+      const invoiceHTML = `
+        <div class="invoice-header">
+          <img src="log.png" alt="Logo" class="logo">
+        </div>
+        <div class="invoice-details">
+          <div class="detail"><strong>Company:</strong> ${company}</div>
+          <div class="detail"><strong>Address:</strong> ${address}</div>
+          <div class="detail"><strong>Invoice Number:</strong> ${invoiceNumber}</div>
+          <div class="detail"><strong>Date:</strong> ${date}</div>
+          <div class="detail"><strong>Services:</strong> ${services}</div>
+          <div class="detail"><strong>Receiver Name:</strong> ${receiverName}</div>
+          <div class="detail"><strong>GST:</strong> ${gst}</div>
+          <div class="detail"><strong>ABN:</strong> ${abn}</div>
+        </div>
+      `;
+      invoicePreview.innerHTML = invoiceHTML;
+      downloadBtn.style.display = "block";
+    });
   
-              // Render the PDF page into the canvas context.
-              const renderContext = {
-                  canvasContext: context,
-                  viewport: viewport
-              };
-              page.render(renderContext).promise.then(function() {
-                  // After rendering the PDF template, overlay invoice text
-                  context.font = "20px Arial";
-                  context.fillStyle = "red";
+    // Download PDF using html2pdf.js once the invoice preview is generated.
+    downloadBtn.addEventListener("click", function() {
+      const element = document.getElementById("invoicePreview");
+      const opt = {
+        margin: 10,
+        filename: "invoice.pdf",
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+      };
   
-                  // Example positions for overlay text; adjust as needed for your template
-                  context.fillText("Invoice: " + invoiceNumber, 50, 100);
-                  context.fillText("Customer: " + customerName, 50, 140);
-                  context.fillText("Amount: $" + amount, 50, 180);
-              });
-          });
-      }).catch(function (reason) {
-          console.error("Error loading the PDF template: " + reason);
-      });
+      html2pdf().set(opt).from(element).save()
+        .then(() => {
+          console.log("PDF generated and download initiated.");
+        })
+        .catch((error) => {
+          console.error("Error generating PDF:", error);
+        });
     });
   });
