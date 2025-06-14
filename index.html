@@ -5,17 +5,18 @@
   <title>Australian Invoice Generator</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
       background: #f5f5f5;
+      margin: 0;
+      padding: 20px 0;
+      font-family: Arial, sans-serif;
     }
     #invoice {
       background: #fff;
+      width: 595px;            /* match A4 width in points */
+      margin: 0 auto;
       padding: 20px;
-      max-width: 800px;
-      margin: auto;
-      border: 1px solid #ddd;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      /* border removed */
     }
     .header {
       display: flex;
@@ -26,20 +27,20 @@
       max-height: 80px;
     }
     h1 {
-      margin: 20px 0 0;
+      margin: 20px 0 10px;
     }
     .supplier, .client {
-      margin-top: 10px;
+      line-height: 1.4;
+      margin-bottom: 20px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-bottom: 20px;
     }
     th, td {
       border: 1px solid #ccc;
       padding: 8px;
-      text-align: left;
     }
     th {
       background: #eee;
@@ -48,9 +49,8 @@
       text-align: right;
     }
     .totals {
-      margin-top: 10px;
       float: right;
-      width: 300px;
+      width: 260px;
     }
     .totals td {
       border: none;
@@ -58,26 +58,22 @@
     }
     button {
       display: block;
-      margin: 40px auto;
+      margin: 20px auto;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
     }
   </style>
-
-  <!-- Load html2canvas first -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <!-- Then load jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
+
   <div id="invoice">
     <div class="header">
       <img src="log.png" alt="Business Logo" class="logo">
       <div class="supplier">
         <strong>Supplier Pty Ltd</strong><br>
         ABN: 12 345 678 901<br>
-        123 Business Street, Melbourne VIC 3000<br>
+        123 Business St, Melbourne VIC 3000<br>
         +61 3 9123 4567<br>
         contact@supplier.com.au
       </div>
@@ -88,15 +84,15 @@
     <div class="client">
       <strong>Bill To:</strong><br>
       Client Name Pty Ltd<br>
-      456 Client Road, Sydney NSW 2000<br>
+      456 Client Rd, Sydney NSW 2000<br>
       +61 2 9876 5432<br>
       client@client.com.au
     </div>
 
     <p>
       <strong>Invoice #:</strong> INV-001<br>
-      <strong>Date Issued:</strong> 14/06/2025<br>
-      <strong>Payment Terms:</strong> 14 days
+      <strong>Date:</strong> 14/06/2025<br>
+      <strong>Terms:</strong> 14 days
     </p>
 
     <table>
@@ -104,9 +100,9 @@
         <tr>
           <th>Description</th>
           <th>Qty</th>
-          <th>Unit Price (AUD)</th>
+          <th>Unit Price</th>
           <th>GST (10%)</th>
-          <th>Total (AUD)</th>
+          <th>Total</th>
         </tr>
       </thead>
       <tbody>
@@ -142,34 +138,35 @@
       </tr>
     </table>
 
-    <p style="clear: both; margin-top: 60px;">
+    <p style="clear: both;">
       <strong>Bank Details:</strong><br>
-      Bank: AusBank<br>
-      BSB: 123-456<br>
-      Account: 987654321
+      AusBank | BSB: 123-456 | Acct: 987654321
     </p>
   </div>
 
   <button id="download">Download PDF</button>
 
-  <script>
-    const { jsPDF } = window.jspdf;
+  <!-- scripts must be loaded in this order -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    document.getElementById('download').addEventListener('click', async () => {
-      const doc = new jsPDF({
-        unit: 'px',
-        format: 'a4'
-      });
-      // Render the invoice div into the PDF
-      await doc.html(document.getElementById('invoice'), {
-        callback: pdf => pdf.save('invoice.pdf'),
-        x: 20,
-        y: 20,
-        html2canvas: {
-          scale: 0.6  // adjust for clarity/resolution
-        }
-      });
+  <script>
+    document.getElementById('download').addEventListener('click', () => {
+      const invoiceEl = document.getElementById('invoice');
+      html2canvas(invoiceEl, {
+        scale: 2,
+        allowTaint: true
+      }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = canvas.height * pdfWidth / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save('invoice.pdf');
+      })
+      .catch(err => console.error(err));
     });
   </script>
+
 </body>
 </html>
