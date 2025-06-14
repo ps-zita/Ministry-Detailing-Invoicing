@@ -18,7 +18,7 @@
       display: none;
     }
     .header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .logo { max-height: 80px; }
+    .logo { max-height: 130px; }
     .supplier, .client { line-height: 1.4; }
     h1 { margin: 20px 0 10px; }
     table {
@@ -174,9 +174,9 @@
         // Download PDF @ moderate size + JPEG compression
         document.getElementById('download').onclick = () => {
           html2canvas(document.getElementById('invoice'), {
-            scale: 2, useCORS: true
+            scale: 8, useCORS: true
           }).then(canvas => {
-            const imgData = canvas.toDataURL('image/jpeg', 0.8);
+            const imgData = canvas.toDataURL('image/jpeg', 1);
             const pdf     = new jsPDF('p','pt','a4');
             const w       = pdf.internal.pageSize.getWidth();
             const h       = canvas.height * w / canvas.width;
