@@ -1,81 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Australian Invoice Generator</title>
+  <meta charset="UTF-8" />
+  <title>Bookings → Invoice</title>
   <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #f5f5f5;
-      font-family: Arial, sans-serif;
+    body { margin:0; padding:20px; font-family:Arial; background:#f5f5f5 }
+    h2 { margin-top:0 }
+    #bookings, #bookings-old {
+      display:flex; flex-wrap:wrap; gap:12px; margin-bottom:12px
+    }
+    .booking-card {
+      background:#fff; border:1px solid #ccc; padding:12px;
+      width:140px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.1);
+      transition:box-shadow .2s; text-align:center;
+    }
+    .booking-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.15) }
+    #toggle-old {
+      background:transparent; border:none; color:#007bff;
+      cursor:pointer; margin-bottom:20px; font-size:14px;
     }
     #invoice {
-      background: #fff;
-      width: 595px;            /* A4 width in points */
-      margin: 0 auto;
-      padding: 20px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      /* no border */
+      display:none; background:#fff; width:595px; margin:0 auto 20px;
+      padding:20px; box-shadow:0 2px 6px rgba(0,0,0,0.1);
     }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .logo {
-      max-height: 80px;
-    }
-    h1 {
-      margin: 20px 0 10px;
-    }
-    .supplier, .client {
-      line-height: 1.4;
-      margin-bottom: 20px;
-    }
+    .header { display:flex; justify-content:space-between }
+    .logo { max-height:130px }
+    .supplier, .client { line-height:1.4 }
+    h1 { margin:20px 0 10px }
     table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
+      width:100%; border-collapse:collapse; margin:15px 0;
     }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-    }
-    th {
-      background: #eee;
-    }
-    .right {
-      text-align: right;
-    }
+    th, td { border:1px solid #ccc; padding:6px }
+    th { background:#eee }
+    .right { text-align:right }
     .totals {
-      float: right;
-      width: 260px;
+      float:right; width:260px; margin-top:10px;
     }
-    .totals td {
-      border: none;
-      padding: 4px 8px;
+    .totals td { border:none; padding:4px 8px }
+    #download, #send-email, #send-message {
+      display:none; padding:10px 20px; font-size:16px;
+      cursor:pointer; margin:10px 4px;
     }
-    button {
-      display: block;
-      margin: 20px auto;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
+    #send-message { background:#ccc; cursor:not-allowed }
+    #email-input {
+      display:none; padding:8px; width:250px; font-size:14px; margin:10px 4px;
     }
   </style>
 </head>
 <body>
 
+  <h2>Recent Bookings (today + yesterday)</h2>
+  <div id="bookings"></div>
+
+  <button id="toggle-old">Show older bookings ▼</button>
+  <div id="bookings-old" style="display:none;"></div>
+
   <div id="invoice">
     <div class="header">
       <img src="log.png" alt="Business Logo" class="logo">
-      <div class="supplier">
-        <strong>Supplier Pty Ltd</strong><br>
-        ABN: 12 345 678 901<br>
-        123 Business St, Melbourne VIC 3000<br>
-        +61 3 9123 4567<br>
-        contact@supplier.com.au
+      <div class="supplier" id="supplier">
+        <strong id="company-name">Supplier Pty Ltd</strong><br>
+        ABN: 98 765 432 100<br>
+        473A Centre Rd, Bentleigh VIC 3204<br>
+        <span id="company-phone">+61 3 9123 4567</span><br>
+        <span id="company-email">contact@supplier.com.au</span>
       </div>
     </div>
 
@@ -83,88 +71,145 @@
 
     <div class="client">
       <strong>Bill To:</strong><br>
-      Client Name Pty Ltd<br>
-      456 Client Rd, Sydney NSW 2000<br>
-      +61 2 9876 5432<br>
-      client@client.com.au
+      <span id="client-name">Client Name</span><br>
+      <span id="client-phone">+61 0 0000 0000</span>
     </div>
 
     <p>
-      <strong>Invoice #:</strong> INV-001<br>
-      <strong>Date:</strong> 14/06/2025<br>
-      <strong>Terms:</strong> 14 days
+      <strong>Invoice #:</strong> <span id="inv-number">1</span><br>
+      <strong>Date:</strong> <span id="inv-date">DD/MM/YYYY</span>
     </p>
 
     <table>
       <thead>
         <tr>
-          <th>Description</th>
-          <th>Qty</th>
-          <th>Unit Price (AUD)</th>
-          <th>GST (10%)</th>
-          <th>Total (AUD)</th>
+          <th>Description</th><th>Qty</th>
+          <th>Unit Price</th><th>GST (10%)</th><th>Total</th>
         </tr>
       </thead>
-      <tbody>
-        <tr>
-          <td>Consulting Services</td>
-          <td>10</td>
-          <td class="right">$150.00</td>
-          <td class="right">$150.00</td>
-          <td class="right">$1,650.00</td>
-        </tr>
-        <tr>
-          <td>Software Licence</td>
-          <td>1</td>
-          <td class="right">$550.00</td>
-          <td class="right">$55.00</td>
-          <td class="right">$605.00</td>
-        </tr>
-      </tbody>
+      <tbody id="invoice-lines"></tbody>
     </table>
 
     <table class="totals">
-      <tr>
-        <td class="right"><strong>Subtotal:</strong></td>
-        <td class="right">$2,000.00</td>
-      </tr>
-      <tr>
-        <td class="right"><strong>GST (10%):</strong></td>
-        <td class="right">$200.00</td>
-      </tr>
-      <tr>
-        <td class="right"><strong>Total Due:</strong></td>
-        <td class="right"><strong>$2,200.00</strong></td>
-      </tr>
+      <tr><td class="right"><strong>Subtotal:</strong></td><td class="right" id="subtotal">$0.00</td></tr>
+      <tr><td class="right"><strong>GST (10%):</strong></td><td class="right" id="gst-total">$0.00</td></tr>
+      <tr><td class="right"><strong>Total Due:</strong></td><td class="right" id="total-due">$0.00</td></tr>
     </table>
 
-    <p style="clear: both;">
+    <p style="clear:both;">
       <strong>Bank Details:</strong><br>
       AusBank | BSB: 123-456 | Account: 987654321
     </p>
   </div>
 
-  <button id="download">Download PDF</button>
+  <div style="text-align:center;">
+    <button id="download">View Invoice Page</button>
+    <input id="email-input" type="email" placeholder="Enter email address">
+    <button id="send-email">Send Email</button>
+    <button id="send-message" disabled>Message</button>
+  </div>
 
-  <!-- load html2canvas first -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <!-- then load jsPDF UMD bundle -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <!-- extract jsPDF constructor -->
   <script>
     const { jsPDF } = window.jspdf;
+    const API  = 'https://mnstry.duckdns.org:3001/bookings';
+    const BASE = 'https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html/';
 
-    document.getElementById('download').addEventListener('click', () => {
-      const invoiceEl = document.getElementById('invoice');
-      html2canvas(invoiceEl, { scale: 2 }).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'pt', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = canvas.height * pdfWidth / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save('invoice.pdf');
-      }).catch(err => console.error(err));
-    });
+    const today     = new Date();
+    const yesterday = new Date(today.getTime() - 24*60*60*1000);
+    let showingOld  = false;
+    let currentSlug = '';
+    let currentName = '';
+
+    document.getElementById('toggle-old').onclick = () => {
+      showingOld = !showingOld;
+      document.getElementById('bookings-old').style.display = showingOld ? 'flex' : 'none';
+      document.getElementById('toggle-old').textContent =
+        (showingOld ? 'Hide' : 'Show') + ' older bookings ' + (showingOld ? '▲' : '▼');
+    };
+
+    fetch(API)
+      .then(r => r.json())
+      .then(bookings => {
+        const recent = document.getElementById('bookings');
+        const oldCtn = document.getElementById('bookings-old');
+        bookings.forEach((b, idx) => {
+          const dt   = new Date(b.booking_date_start_tz);
+          const card = document.createElement('div');
+          card.className = 'booking-card';
+          card.innerHTML = `<strong>${b.customer_full_name}</strong><br>${b.time}`;
+          card.onclick  = () => selectBooking(b, idx);
+          (dt >= yesterday ? recent : oldCtn).append(card);
+        });
+      })
+      .catch(console.error);
+
+    function selectBooking(b, idx) {
+      // build slug & store name
+      const padded = String(idx).padStart(3,'0');
+      const name   = (b.customer_first_name||'').toLowerCase();
+      currentSlug  = padded + name;
+      currentName  = b.customer_first_name || '';
+
+      // supplier details
+      document.getElementById('company-name').textContent  = b.company_name;
+      document.getElementById('company-phone').textContent = b.user_phone;
+      document.getElementById('company-email').textContent = b.user_email;
+
+      // invoice header
+      document.getElementById('inv-number').textContent = padded;
+      document.getElementById('inv-date').textContent   = b.booking_date_start_formatted;
+
+      // client info
+      document.getElementById('client-name').textContent  = b.customer_full_name;
+      document.getElementById('client-phone').textContent = b.customer_phone;
+
+      // line items
+      const price = parseFloat(b.booking_price_float);
+      const gst   = price * .10;
+      const fmt   = x => b.booking_price_currency + ' ' + x.toFixed(2);
+
+      document.getElementById('invoice-lines').innerHTML = `
+        <tr>
+          <td>${b.service_name}</td>
+          <td>1</td>
+          <td class="right">${fmt(price)}</td>
+          <td class="right">${fmt(gst)}</td>
+          <td class="right">${fmt(price + gst)}</td>
+        </tr>
+      `;
+      document.getElementById('subtotal').textContent  = fmt(price);
+      document.getElementById('gst-total').textContent = fmt(gst);
+      document.getElementById('total-due').textContent = fmt(price + gst);
+
+      // reveal invoice + buttons
+      document.getElementById('invoice').style.display    = 'block';
+      document.getElementById('download').style.display   = 'inline-block';
+      document.getElementById('email-input').style.display  = 'inline-block';
+      document.getElementById('send-email').style.display   = 'inline-block';
+      document.getElementById('send-message').style.display = 'inline-block';
+
+      // Download opens the path-based booking URL
+      document.getElementById('download').onclick = () => {
+        window.open(BASE + currentSlug, '_blank');
+      };
+
+      // Send Email uses the same BASE + slug URL
+      document.getElementById('send-email').onclick = () => {
+        const email = document.getElementById('email-input').value.trim();
+        if (!email || !email.includes('@')) {
+          return alert('Enter a valid email');
+        }
+        const url     = BASE + currentSlug;
+        const subject = encodeURIComponent('Your Invoice from Ministry of Detailing');
+        const body    = encodeURIComponent(
+          `Hi ${currentName},\n\n` +
+          `View your invoice here: ${url}\n\nThank you!`
+        );
+        window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      };
+    }
   </script>
 </body>
 </html>

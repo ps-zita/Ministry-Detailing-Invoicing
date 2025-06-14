@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invoice Lookup</title>
+  <style>
+    body { font-family: Arial; background: #f5f5f5; padding:20px }
+    #invoice {
+      background:#fff; width:595px; margin:0 auto; padding:20px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.1); display:none;
+    }
+    .header { display:flex; justify-content:space-between; align-items:flex-start }
+    .logo { max-height:80px }
+    .supplier,.client { line-height:1.4 }
+    h1 { margin:20px 0 10px }
+    table { width:100%; border-collapse:collapse; margin:15px 0 }
+    th,td { border:1px solid #ccc; padding:6px }
+    th { background:#eee }
+    .right { text-align:right }
+    .totals { float:right; width:260px; margin-top:10px }
+    .totals td { border:none; padding:4px 8px }
+    #qrcode { text-align:center; margin:20px auto }
+    #download,#print {
+      display:none; padding:10px 20px; font-size:16px;
+      cursor:pointer; margin:10px 5px
+    }
+    @media print {
+      body * { visibility:hidden!important }
+      #invoice,#invoice * { visibility:visible!important }
+      #invoice {
+        position:fixed!important; top:0; left:0;
+        width:100%!important; margin:0!important; padding:0!important;
+        box-shadow:none!important
+      }
+      #download,#print { display:none!important }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+  <div id="invoice">
+    <div class="header">
+      <img src="log.png" class="logo" alt="Logo">
+      <div class="supplier">
+        <strong id="company-name">Ministry of Detailing</strong><br>
+        ABN: 98 765 432 100<br>
+        473A Centre Rd, Bentleigh VIC 3204<br>
+        <span id="company-phone"></span><br>
+        <span id="company-email"></span>
+      </div>
+    </div>
+
+    <h1>Tax Invoice</h1>
+
+    <div class="client">
+      <strong>Bill To:</strong><br>
+      <span id="client-name"></span><br>
+      <span id="client-phone"></span>
+    </div>
+
+    <p>
+      <strong>Invoice #:</strong> <span id="inv-number"></span><br>
+      <strong>Date:</strong> <span id="inv-date"></span>
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th><th>Qty</th><th>Unit Price</th><th>GST (10%)</th><th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="invoice-lines"></tbody>
+    </table>
+
+    <table class="totals">
+      <tr><td class="right"><strong>Subtotal:</strong></td><td class="right" id="subtotal"></td></tr>
+      <tr><td class="right"><strong>GST (10%):</strong></td><td class="right" id="gst-total"></td></tr>
+      <tr><td class="right"><strong>Total Due:</strong></td><td class="right" id="total-due"></td></tr>
+    </table>
+
+    <div id="qrcode"></div>
+
+    <p style="clear:both;">
+      <strong>Bank Details:</strong><br>
+      AusBank | BSB: 123-456 | Account: 987654321
+    </p>
+  </div>
+
+  <div style="text-align:center;">
+    <button id="download">Download PDF</button>
+    <button id="print">Print Invoice</button>
+  </div>
+
+  <script>
+    const { jsPDF } = window.jspdf;
+    const BASE = 'https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html/';
+    // grab slug from path: .../booking.html/<slug>
+    const slug = location.pathname.split('/').pop().toLowerCase();
+
+    fetch('https://mnstry.duckdns.org:3001/bookings')
+      .then(r => r.json())
+      .then(bookings => {
+        const match = bookings.find((b,i) => {
+          const idx = i.toString().padStart(3,'0');
+          return slug === idx + (b.customer_first_name||'').toLowerCase();
+        });
+        if (!match) {
+          document.body.innerHTML = '<h2 style="text-align:center;">Booking not found</h2>';
+          return;
+        }
+
+        const idx   = bookings.indexOf(match);
+        const price = parseFloat(match.booking_price_float);
+        const gst   = price * 0.10;
+        const total = price + gst;
+        const fmt   = x => match.booking_price_currency + ' ' + x.toFixed(2);
+
+        // fill fields
+        document.getElementById('company-name').textContent  = match.company_name;
+        document.getElementById('company-phone').textContent = match.user_phone;
+        document.getElementById('company-email').textContent = match.user_email;
+        document.getElementById('client-name').textContent   = match.customer_full_name;
+        document.getElementById('client-phone').textContent  = match.customer_phone;
+        document.getElementById('inv-number').textContent    = idx.toString().padStart(3,'0');
+        document.getElementById('inv-date').textContent      = match.booking_date_start_formatted;
+
+        document.getElementById('invoice-lines').innerHTML = `
+          <tr>
+            <td>${match.service_name}</td>
+            <td>1</td>
+            <td class="right">${fmt(price)}</td>
+            <td class="right">${fmt(gst)}</td>
+            <td class="right">${fmt(total)}</td>
+          </tr>
+        `;
+        document.getElementById('subtotal').textContent  = fmt(price);
+        document.getElementById('gst-total').textContent = fmt(gst);
+        document.getElementById('total-due').textContent = fmt(total);
+
+        // QR of the GitHub URL path
+        new QRCode(document.getElementById('qrcode'), {
+          text: BASE + slug,
+          width: 128,
+          height: 128,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // reveal
+        document.getElementById('invoice').style.display  = 'block';
+        document.getElementById('download').style.display = 'inline-block';
+        document.getElementById('print').style.display    = 'inline-block';
+
+        // download as JPEG/PDF
+        document.getElementById('download').onclick = () => {
+          html2canvas(document.getElementById('invoice'), {
+            scale: 2, useCORS: true
+          }).then(canvas => {
+            const img = canvas.toDataURL('image/jpeg', 0.8);
+            const pdf = new jsPDF('p','pt','a4');
+            const w   = pdf.internal.pageSize.getWidth();
+            const h   = canvas.height * w / canvas.width;
+            pdf.addImage(img, 'JPEG', 0, 0, w, h);
+            const inv = document.getElementById('inv-number').textContent;
+            pdf.save(`invoice${inv}.pdf`);
+          });
+        };
+
+        // print
+        document.getElementById('print').onclick = () => window.print();
+      })
+      .catch(err => {
+        console.error(err);
+        document.body.innerHTML = '<h2 style="text-align:center;">Could not load booking</h2>';
+      });
+  </script>
+</body>
+</html>
