@@ -11,7 +11,7 @@
     }
     .header { display:flex; justify-content:space-between; align-items:flex-start }
     .logo { max-height:80px }
-    .supplier,.client { line-height:1.4 }
+    .supplier, .client { line-height:1.4 }
     h1 { margin:20px 0 10px }
     table { width:100%; border-collapse:collapse; margin:15px 0 }
     th,td { border:1px solid #ccc; padding:6px }
@@ -22,7 +22,7 @@
     #qrcode { text-align:center; margin:20px auto }
     #download,#print {
       display:none; padding:10px 20px; font-size:16px;
-      cursor:pointer; margin:10px 5px
+      cursor:pointer; margin:10px 5px;
     }
     @media print {
       body * { visibility:hidden!important }
@@ -96,16 +96,19 @@
 
   <script>
     const { jsPDF } = window.jspdf;
-    const BASE = 'https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html/';
-    // grab slug from path: .../booking.html/<slug>
-    const slug = location.pathname.split('/').pop().toLowerCase();
+    // Try path-based slug first, fallback to ?slug=
+    let slug = location.pathname.split('/').pop();
+    if (!slug || slug === 'booking.html') {
+      slug = new URLSearchParams(location.search).get('slug') || '';
+    }
+    slug = slug.toLowerCase();
 
     fetch('https://mnstry.duckdns.org:3001/bookings')
       .then(r => r.json())
       .then(bookings => {
         const match = bookings.find((b,i) => {
-          const idx = i.toString().padStart(3,'0');
-          return slug === idx + (b.customer_first_name||'').toLowerCase();
+          const id = i.toString().padStart(3,'0') + (b.customer_first_name||'').toLowerCase();
+          return slug === id;
         });
         if (!match) {
           document.body.innerHTML = '<h2 style="text-align:center;">Booking not found</h2>';
@@ -113,12 +116,12 @@
         }
 
         const idx   = bookings.indexOf(match);
-        const price = parseFloat(match.booking_price_float);
-        const gst   = price * 0.10;
+        const price = +match.booking_price_float;
+        const gst   = price * .10;
         const total = price + gst;
         const fmt   = x => match.booking_price_currency + ' ' + x.toFixed(2);
 
-        // fill fields
+        // Fill invoice
         document.getElementById('company-name').textContent  = match.company_name;
         document.getElementById('company-phone').textContent = match.user_phone;
         document.getElementById('company-email').textContent = match.user_email;
@@ -140,20 +143,22 @@
         document.getElementById('gst-total').textContent = fmt(gst);
         document.getElementById('total-due').textContent = fmt(total);
 
-        // QR of the GitHub URL path
+        // QR points back to whichever slug style used
+        const url = `${location.origin}${location.pathname.includes('?') 
+          ? location.pathname 
+          : location.pathname}/${slug}`;
         new QRCode(document.getElementById('qrcode'), {
-          text: BASE + slug,
-          width: 128,
-          height: 128,
+          text: url,
+          width: 128, height: 128,
           correctLevel: QRCode.CorrectLevel.H
         });
 
-        // reveal
+        // Show invoice + buttons
         document.getElementById('invoice').style.display  = 'block';
         document.getElementById('download').style.display = 'inline-block';
         document.getElementById('print').style.display    = 'inline-block';
 
-        // download as JPEG/PDF
+        // Download as JPEG/PDF
         document.getElementById('download').onclick = () => {
           html2canvas(document.getElementById('invoice'), {
             scale: 2, useCORS: true
@@ -162,18 +167,16 @@
             const pdf = new jsPDF('p','pt','a4');
             const w   = pdf.internal.pageSize.getWidth();
             const h   = canvas.height * w / canvas.width;
-            pdf.addImage(img, 'JPEG', 0, 0, w, h);
+            pdf.addImage(img,'JPEG',0,0,w,h);
             const inv = document.getElementById('inv-number').textContent;
             pdf.save(`invoice${inv}.pdf`);
           });
         };
 
-        // print
         document.getElementById('print').onclick = () => window.print();
       })
-      .catch(err => {
-        console.error(err);
-        document.body.innerHTML = '<h2 style="text-align:center;">Could not load booking</h2>';
+      .catch(() => {
+        document.body.innerHTML = '<h2 style="text-align:center;">Error loading booking</h2>';
       });
   </script>
 </body>
