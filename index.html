@@ -4,46 +4,65 @@
   <meta charset="UTF-8" />
   <title>Bookings → Invoice</title>
   <style>
-    body { margin:0; padding:20px; font-family:Arial; background:#f5f5f5 }
-    h2 { margin-top:0 }
+    body {
+      margin: 0; padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+    }
+    h2 { margin-top: 0; }
     #bookings, #bookings-old {
-      display:flex; flex-wrap:wrap; gap:12px; margin-bottom:12px
+      display: flex; flex-wrap: wrap; gap: 12px;
+      margin-bottom: 12px;
     }
     .booking-card {
-      background:#fff; border:1px solid #ccc; padding:12px;
-      width:140px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.1);
-      transition:box-shadow .2s; text-align:center;
+      background: #fff; border: 1px solid #ccc;
+      padding: 12px; width: 140px; cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      transition: box-shadow .2s;
+      text-align: center;
     }
-    .booking-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.15) }
+    .booking-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
     #toggle-old {
-      background:transparent; border:none; color:#007bff;
-      cursor:pointer; margin-bottom:20px; font-size:14px;
+      background: transparent; border: none;
+      color: #007bff; cursor: pointer;
+      margin-bottom: 20px; font-size: 14px;
     }
     #invoice {
-      display:none; background:#fff; width:595px; margin:0 auto 20px;
-      padding:20px; box-shadow:0 2px 6px rgba(0,0,0,0.1);
+      display: none;
+      background: #fff;
+      width: 595px;
+      margin: 0 auto 20px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    .header { display:flex; justify-content:space-between }
-    .logo { max-height:130px }
-    .supplier, .client { line-height:1.4 }
-    h1 { margin:20px 0 10px }
-    table {
-      width:100%; border-collapse:collapse; margin:15px 0;
-    }
-    th, td { border:1px solid #ccc; padding:6px }
-    th { background:#eee }
-    .right { text-align:right }
+    .header { display: flex; justify-content: space-between; }
+    .logo { max-height: 130px; }
+    .supplier, .client { line-height: 1.4; }
+    h1 { margin: 20px 0 10px; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { border: 1px solid #ccc; padding: 6px; }
+    th { background: #eee; }
+    .right { text-align: right; }
     .totals {
-      float:right; width:260px; margin-top:10px;
+      float: right; width: 260px; margin-top: 10px;
     }
-    .totals td { border:none; padding:4px 8px }
+    .totals td { border: none; padding: 4px 8px; }
     #download, #send-email, #send-message {
-      display:none; padding:10px 20px; font-size:16px;
-      cursor:pointer; margin:10px 4px;
+      display: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 4px;
     }
-    #send-message { background:#ccc; cursor:not-allowed }
+    #send-message { background: #ccc; cursor: not-allowed; }
     #email-input {
-      display:none; padding:8px; width:250px; font-size:14px; margin:10px 4px;
+      display: none;
+      padding: 8px;
+      width: 250px;
+      font-size: 14px;
+      margin: 10px 4px;
     }
   </style>
 </head>
@@ -53,7 +72,7 @@
   <div id="bookings"></div>
 
   <button id="toggle-old">Show older bookings ▼</button>
-  <div id="bookings-old" style="display:none;"></div>
+  <div id="bookings-old" style="display: none;"></div>
 
   <div id="invoice">
     <div class="header">
@@ -83,20 +102,32 @@
     <table>
       <thead>
         <tr>
-          <th>Description</th><th>Qty</th>
-          <th>Unit Price</th><th>GST (10%)</th><th>Total</th>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>GST (10%)</th>
+          <th>Total</th>
         </tr>
       </thead>
       <tbody id="invoice-lines"></tbody>
     </table>
 
     <table class="totals">
-      <tr><td class="right"><strong>Subtotal:</strong></td><td class="right" id="subtotal">$0.00</td></tr>
-      <tr><td class="right"><strong>GST (10%):</strong></td><td class="right" id="gst-total">$0.00</td></tr>
-      <tr><td class="right"><strong>Total Due:</strong></td><td class="right" id="total-due">$0.00</td></tr>
+      <tr>
+        <td class="right"><strong>Subtotal:</strong></td>
+        <td class="right" id="subtotal">$0.00</td>
+      </tr>
+      <tr>
+        <td class="right"><strong>GST (10%):</strong></td>
+        <td class="right" id="gst-total">$0.00</td>
+      </tr>
+      <tr>
+        <td class="right"><strong>Total Due:</strong></td>
+        <td class="right" id="total-due"><strong>$0.00</strong></td>
+      </tr>
     </table>
 
-    <p style="clear:both;">
+    <p style="clear: both;">
       <strong>Bank Details:</strong><br>
       AusBank | BSB: 123-456 | Account: 987654321
     </p>
@@ -104,7 +135,7 @@
 
   <div style="text-align:center;">
     <button id="download">View Invoice Page</button>
-    <input id="email-input" type="email" placeholder="Enter email address">
+    <input id="email-input" type="email" placeholder="Enter email address" />
     <button id="send-email">Send Email</button>
     <button id="send-message" disabled>Message</button>
   </div>
@@ -146,26 +177,21 @@
       .catch(console.error);
 
     function selectBooking(b, idx) {
-      // build slug & store name
       const padded = String(idx).padStart(3,'0');
       const name   = (b.customer_first_name||'').toLowerCase();
       currentSlug  = padded + name;
       currentName  = b.customer_first_name || '';
 
-      // supplier details
       document.getElementById('company-name').textContent  = b.company_name;
       document.getElementById('company-phone').textContent = b.user_phone;
       document.getElementById('company-email').textContent = b.user_email;
 
-      // invoice header
       document.getElementById('inv-number').textContent = padded;
       document.getElementById('inv-date').textContent   = b.booking_date_start_formatted;
 
-      // client info
       document.getElementById('client-name').textContent  = b.customer_full_name;
       document.getElementById('client-phone').textContent = b.customer_phone;
 
-      // line items
       const price = parseFloat(b.booking_price_float);
       const gst   = price * .10;
       const fmt   = x => b.booking_price_currency + ' ' + x.toFixed(2);
@@ -183,30 +209,25 @@
       document.getElementById('gst-total').textContent = fmt(gst);
       document.getElementById('total-due').textContent = fmt(price + gst);
 
-      // reveal invoice + buttons
       document.getElementById('invoice').style.display    = 'block';
       document.getElementById('download').style.display   = 'inline-block';
       document.getElementById('email-input').style.display  = 'inline-block';
       document.getElementById('send-email').style.display   = 'inline-block';
       document.getElementById('send-message').style.display = 'inline-block';
 
-      // Download opens the path-based booking URL
       document.getElementById('download').onclick = () => {
         window.open(BASE + currentSlug, '_blank');
       };
 
-      // Send Email uses the same BASE + slug URL
       document.getElementById('send-email').onclick = () => {
         const email = document.getElementById('email-input').value.trim();
         if (!email || !email.includes('@')) {
-          return alert('Enter a valid email');
+          alert('Please enter a valid email address');
+          return;
         }
         const url     = BASE + currentSlug;
         const subject = encodeURIComponent('Your Invoice from Ministry of Detailing');
-        const body    = encodeURIComponent(
-          `Hi ${currentName},\n\n` +
-          `View your invoice here: ${url}\n\nThank you!`
-        );
+        const body    = encodeURIComponent(`Hi ${currentName},\n\nView your invoice here: ${url}\n\nThank you!`);
         window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
       };
     }
