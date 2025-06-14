@@ -41,7 +41,9 @@
     .logo { max-height: 130px; }
     .supplier, .client { line-height: 1.4; }
     h1 { margin: 20px 0 10px; }
-    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    table {
+      width: 100%; border-collapse: collapse; margin: 15px 0;
+    }
     th, td { border: 1px solid #ccc; padding: 6px; }
     th { background: #eee; }
     .right { text-align: right; }
@@ -50,19 +52,13 @@
     }
     .totals td { border: none; padding: 4px 8px; }
     #download, #send-email, #send-message {
-      display: none;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      margin: 10px 4px;
+      display: none; padding: 10px 20px; font-size: 16px;
+      cursor: pointer; margin: 10px 4px;
     }
     #send-message { background: #ccc; cursor: not-allowed; }
     #email-input {
-      display: none;
-      padding: 8px;
-      width: 250px;
-      font-size: 14px;
-      margin: 10px 4px;
+      display: none; padding: 8px; width: 250px;
+      font-size: 14px; margin: 10px 4px;
     }
   </style>
 </head>
@@ -102,11 +98,8 @@
     <table>
       <thead>
         <tr>
-          <th>Description</th>
-          <th>Qty</th>
-          <th>Unit Price</th>
-          <th>GST (10%)</th>
-          <th>Total</th>
+          <th>Description</th><th>Qty</th>
+          <th>Unit Price</th><th>GST (10%)</th><th>Total</th>
         </tr>
       </thead>
       <tbody id="invoice-lines"></tbody>
@@ -140,15 +133,12 @@
     <button id="send-message" disabled>Message</button>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
-    const { jsPDF } = window.jspdf;
     const API  = 'https://mnstry.duckdns.org:3001/bookings';
-    const BASE = 'https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html/';
+    const BASE = 'booking.html?slug='; // use query-param
 
     const today     = new Date();
-    const yesterday = new Date(today.getTime() - 24*60*60*1000);
+    const yesterday = new Date(today.getTime() - 86400000);
     let showingOld  = false;
     let currentSlug = '';
     let currentName = '';
@@ -177,23 +167,27 @@
       .catch(console.error);
 
     function selectBooking(b, idx) {
-      const padded = String(idx).padStart(3,'0');
+      const padded = String(idx).padStart(3, '0');
       const name   = (b.customer_first_name||'').toLowerCase();
       currentSlug  = padded + name;
       currentName  = b.customer_first_name || '';
 
+      // fill supplier
       document.getElementById('company-name').textContent  = b.company_name;
       document.getElementById('company-phone').textContent = b.user_phone;
       document.getElementById('company-email').textContent = b.user_email;
 
+      // invoice header
       document.getElementById('inv-number').textContent = padded;
       document.getElementById('inv-date').textContent   = b.booking_date_start_formatted;
 
+      // client
       document.getElementById('client-name').textContent  = b.customer_full_name;
       document.getElementById('client-phone').textContent = b.customer_phone;
 
+      // line items
       const price = parseFloat(b.booking_price_float);
-      const gst   = price * .10;
+      const gst   = price * 0.10;
       const fmt   = x => b.booking_price_currency + ' ' + x.toFixed(2);
 
       document.getElementById('invoice-lines').innerHTML = `
@@ -209,22 +203,22 @@
       document.getElementById('gst-total').textContent = fmt(gst);
       document.getElementById('total-due').textContent = fmt(price + gst);
 
-      document.getElementById('invoice').style.display    = 'block';
-      document.getElementById('download').style.display   = 'inline-block';
-      document.getElementById('email-input').style.display  = 'inline-block';
-      document.getElementById('send-email').style.display   = 'inline-block';
-      document.getElementById('send-message').style.display = 'inline-block';
+      // reveal UI
+      document.getElementById('invoice').style.display     = 'block';
+      document.getElementById('download').style.display    = 'inline-block';
+      document.getElementById('email-input').style.display = 'inline-block';
+      document.getElementById('send-email').style.display  = 'inline-block';
+      document.getElementById('send-message').style.display= 'inline-block';
 
+      // open booking.html?slug=
       document.getElementById('download').onclick = () => {
         window.open(BASE + currentSlug, '_blank');
       };
 
+      // send email
       document.getElementById('send-email').onclick = () => {
         const email = document.getElementById('email-input').value.trim();
-        if (!email || !email.includes('@')) {
-          alert('Please enter a valid email address');
-          return;
-        }
+        if (!email.includes('@')) return alert('Invalid email');
         const url     = BASE + currentSlug;
         const subject = encodeURIComponent('Your Invoice from Ministry of Detailing');
         const body    = encodeURIComponent(`Hi ${currentName},\n\nView your invoice here: ${url}\n\nThank you!`);
