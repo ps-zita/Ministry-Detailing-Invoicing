@@ -31,10 +31,8 @@
     }
     #invoice {
       display: none;
-      background: #fff;
-      width: 595px;
-      margin: 0 auto 20px;
-      padding: 20px;
+      background: #fff; width: 595px;
+      margin: 0 auto 20px; padding: 20px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
     .header { display: flex; justify-content: space-between; }
@@ -42,7 +40,8 @@
     .supplier, .client { line-height: 1.4; }
     h1 { margin: 20px 0 10px; }
     table {
-      width: 100%; border-collapse: collapse; margin: 15px 0;
+      width: 100%; border-collapse: collapse;
+      margin: 15px 0;
     }
     th, td { border: 1px solid #ccc; padding: 6px; }
     th { background: #eee; }
@@ -52,8 +51,9 @@
     }
     .totals td { border: none; padding: 4px 8px; }
     #download, #send-email, #send-message {
-      display: none; padding: 10px 20px; font-size: 16px;
-      cursor: pointer; margin: 10px 4px;
+      display: none; padding: 10px 20px;
+      font-size: 16px; cursor: pointer;
+      margin: 10px 4px;
     }
     #send-message { background: #ccc; cursor: not-allowed; }
     #email-input {
@@ -74,11 +74,12 @@
     <div class="header">
       <img src="log.png" alt="Business Logo" class="logo">
       <div class="supplier" id="supplier">
-        <strong id="company-name">Supplier Pty Ltd</strong><br>
+        <strong id="company-name">Ministry of Detailing</strong><br>
         ABN: 98 765 432 100<br>
         473A Centre Rd, Bentleigh VIC 3204<br>
         <span id="company-phone">+61 3 9123 4567</span><br>
-        <span id="company-email">contact@supplier.com.au</span>
+        <!-- Hard-coded email -->
+        <span id="company-email">enquiries@ministryofdetailing.com.au</span>
       </div>
     </div>
 
@@ -135,19 +136,22 @@
 
   <script>
     const API  = 'https://mnstry.duckdns.org:3001/bookings';
-    const BASE = 'booking.html?slug='; // use query-param
+    const BASE = 'booking.html?slug=';
 
     const today     = new Date();
-    const yesterday = new Date(today.getTime() - 86400000);
+    const yesterday = new Date(today - 86400000);
     let showingOld  = false;
     let currentSlug = '';
     let currentName = '';
 
     document.getElementById('toggle-old').onclick = () => {
       showingOld = !showingOld;
-      document.getElementById('bookings-old').style.display = showingOld ? 'flex' : 'none';
+      document.getElementById('bookings-old').style.display =
+        showingOld ? 'flex' : 'none';
       document.getElementById('toggle-old').textContent =
-        (showingOld ? 'Hide' : 'Show') + ' older bookings ' + (showingOld ? '▲' : '▼');
+        (showingOld ? 'Hide' : 'Show') +
+        ' older bookings ' +
+        (showingOld ? '▲' : '▼');
     };
 
     fetch(API)
@@ -167,15 +171,14 @@
       .catch(console.error);
 
     function selectBooking(b, idx) {
-      const padded = String(idx).padStart(3, '0');
+      const padded = String(idx).padStart(3,'0');
       const name   = (b.customer_first_name||'').toLowerCase();
       currentSlug  = padded + name;
       currentName  = b.customer_first_name || '';
 
-      // fill supplier
+      // supplier name & phone only (email is hard-coded in HTML)
       document.getElementById('company-name').textContent  = b.company_name;
       document.getElementById('company-phone').textContent = b.user_phone;
-      document.getElementById('company-email').textContent = b.user_email;
 
       // invoice header
       document.getElementById('inv-number').textContent = padded;
@@ -185,7 +188,7 @@
       document.getElementById('client-name').textContent  = b.customer_full_name;
       document.getElementById('client-phone').textContent = b.customer_phone;
 
-      // line items
+      // line item & totals
       const price = parseFloat(b.booking_price_float);
       const gst   = price * 0.10;
       const fmt   = x => b.booking_price_currency + ' ' + x.toFixed(2);
@@ -203,26 +206,27 @@
       document.getElementById('gst-total').textContent = fmt(gst);
       document.getElementById('total-due').textContent = fmt(price + gst);
 
-      // reveal UI
-      document.getElementById('invoice').style.display     = 'block';
-      document.getElementById('download').style.display    = 'inline-block';
-      document.getElementById('email-input').style.display = 'inline-block';
-      document.getElementById('send-email').style.display  = 'inline-block';
-      document.getElementById('send-message').style.display= 'inline-block';
+      // reveal invoice + controls
+      document.getElementById('invoice').style.display      = 'block';
+      document.getElementById('download').style.display     = 'inline-block';
+      document.getElementById('email-input').style.display  = 'inline-block';
+      document.getElementById('send-email').style.display   = 'inline-block';
+      document.getElementById('send-message').style.display = 'inline-block';
 
-      // open booking.html?slug=
       document.getElementById('download').onclick = () => {
         window.open(BASE + currentSlug, '_blank');
       };
-
-      // send email
       document.getElementById('send-email').onclick = () => {
         const email = document.getElementById('email-input').value.trim();
-        if (!email.includes('@')) return alert('Invalid email');
-        const url     = BASE + currentSlug;
-        const subject = encodeURIComponent('Your Invoice from Ministry of Detailing');
-        const body    = encodeURIComponent(`Hi ${currentName},\n\nView your invoice here: ${url}\n\nThank you!`);
-        window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+        if (!email.includes('@')) alert('Enter valid email');
+        else {
+          const url     = BASE + currentSlug;
+          const subject = encodeURIComponent('Your Invoice');
+          const body    = encodeURIComponent(
+            `Hi ${currentName},\n\nView your invoice here: ${url}\n\nThanks!`
+          );
+          window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+        }
       };
     }
   </script>

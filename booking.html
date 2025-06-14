@@ -4,37 +4,57 @@
   <meta charset="UTF-8" />
   <title>Invoice Lookup</title>
   <style>
-    body { font-family: Arial; background: #f5f5f5; padding:20px }
-    #invoice {
-      background:#fff; width:595px; margin:0 auto; padding:20px;
-      box-shadow:0 2px 6px rgba(0,0,0,0.1); display:none;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
     }
-    .header { display:flex; justify-content:space-between; align-items:flex-start }
-    .logo { max-height:130px }
-    .supplier, .client { line-height:1.4 }
-    h1 { margin:20px 0 10px }
-    table { width:100%; border-collapse:collapse; margin:15px 0 }
-    th,td { border:1px solid #ccc; padding:6px }
-    th { background:#eee }
-    .right { text-align:right }
-    .totals { float:right; width:260px; margin-top:10px }
-    .totals td { border:none; padding:4px 8px }
-    #qrcode { text-align:center; margin:20px auto }
-    #download,#print {
-      display:none; padding:10px 20px; font-size:16px;
-      cursor:pointer; margin:10px 5px;
+    #invoice {
+      background: white;
+      width: 595px;
+      margin: 0 auto;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      display: none;
+    }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .logo { max-height: 80px; }
+    .supplier, .client { line-height: 1.4; }
+    h1 { margin: 20px 0 10px; }
+    table {
+      width: 100%; border-collapse: collapse; margin: 15px 0;
+    }
+    th, td { border: 1px solid #ccc; padding: 6px; }
+    th { background: #eee; }
+    .right { text-align: right; }
+    .totals {
+      float: right; width: 260px; margin-top: 10px;
+    }
+    .totals td { border: none; padding: 4px 8px; }
+    #qrcode { text-align: center; margin: 20px auto; }
+    #download, #print {
+      display: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px 5px;
     }
     @media print {
-      body * { visibility:hidden!important }
-      #invoice,#invoice * { visibility:visible!important }
+      body * { visibility: hidden !important; }
+      #invoice, #invoice * { visibility: visible !important; }
       #invoice {
-        position:fixed!important; top:0; left:0;
-        width:100%!important; margin:0!important; padding:0!important;
-        box-shadow:none!important
+        position: fixed !important;
+        top: 0; left: 0;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
       }
-      #download,#print { display:none!important }
+      #download, #print { display: none !important; }
     }
   </style>
+
+  <!-- dependencies -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -43,13 +63,14 @@
 
   <div id="invoice">
     <div class="header">
-      <img src="log.png" class="logo" alt="Logo">
+      <img src="log.png" alt="Logo" class="logo" />
       <div class="supplier">
         <strong id="company-name">Ministry of Detailing</strong><br>
         ABN: 98 765 432 100<br>
         473A Centre Rd, Bentleigh VIC 3204<br>
         <span id="company-phone"></span><br>
-        <span id="company-email"></span>
+        <!-- hard-coded email -->
+        <span id="company-email">enquiries@ministryofdetailing.com.au</span>
       </div>
     </div>
 
@@ -96,17 +117,12 @@
 
   <script>
     const { jsPDF } = window.jspdf;
-    // Try path-based slug first, fallback to ?slug=
-    let slug = location.pathname.split('/').pop();
-    if (!slug || slug === 'booking.html') {
-      slug = new URLSearchParams(location.search).get('slug') || '';
-    }
-    slug = slug.toLowerCase();
+    const slug = new URLSearchParams(location.search).get('slug')?.toLowerCase() || '';
 
     fetch('https://mnstry.duckdns.org:3001/bookings')
       .then(r => r.json())
       .then(bookings => {
-        const match = bookings.find((b,i) => {
+        const match = bookings.find((b, i) => {
           const id = i.toString().padStart(3,'0') + (b.customer_first_name||'').toLowerCase();
           return slug === id;
         });
@@ -116,15 +132,15 @@
         }
 
         const idx   = bookings.indexOf(match);
-        const price = +match.booking_price_float;
-        const gst   = price * .10;
+        const price = parseFloat(match.booking_price_float);
+        const gst   = price * 0.10;
         const total = price + gst;
         const fmt   = x => match.booking_price_currency + ' ' + x.toFixed(2);
 
-        // Fill invoice
+        // fill invoice
         document.getElementById('company-name').textContent  = match.company_name;
         document.getElementById('company-phone').textContent = match.user_phone;
-        document.getElementById('company-email').textContent = match.user_email;
+        // company-email stays hard-coded
         document.getElementById('client-name').textContent   = match.customer_full_name;
         document.getElementById('client-phone').textContent  = match.customer_phone;
         document.getElementById('inv-number').textContent    = idx.toString().padStart(3,'0');
@@ -143,40 +159,39 @@
         document.getElementById('gst-total').textContent = fmt(gst);
         document.getElementById('total-due').textContent = fmt(total);
 
-        // QR points back to whichever slug style used
-        const url = `${location.origin}${location.pathname.includes('?') 
-          ? location.pathname 
-          : location.pathname}/${slug}`;
+        // QR code of this exact URL
         new QRCode(document.getElementById('qrcode'), {
-          text: url,
+          text: location.href,
           width: 128, height: 128,
           correctLevel: QRCode.CorrectLevel.H
         });
 
-        // Show invoice + buttons
+        // reveal UI
         document.getElementById('invoice').style.display  = 'block';
         document.getElementById('download').style.display = 'inline-block';
         document.getElementById('print').style.display    = 'inline-block';
 
-        // Download as JPEG/PDF
+        // Download PDF @ moderate size + JPEG compression
         document.getElementById('download').onclick = () => {
           html2canvas(document.getElementById('invoice'), {
-            scale: 8, useCORS: true
+            scale: 2, useCORS: true
           }).then(canvas => {
-            const img = canvas.toDataURL('image/jpeg', 1);
-            const pdf = new jsPDF('p','pt','a4');
-            const w   = pdf.internal.pageSize.getWidth();
-            const h   = canvas.height * w / canvas.width;
-            pdf.addImage(img,'JPEG',0,0,w,h);
-            const inv = document.getElementById('inv-number').textContent;
-            pdf.save(`invoice${inv}.pdf`);
+            const imgData = canvas.toDataURL('image/jpeg', 0.8);
+            const pdf     = new jsPDF('p','pt','a4');
+            const w       = pdf.internal.pageSize.getWidth();
+            const h       = canvas.height * w / canvas.width;
+            pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+            const invNum = document.getElementById('inv-number').textContent;
+            pdf.save(`invoice${invNum}.pdf`);
           });
         };
 
+        // Print
         document.getElementById('print').onclick = () => window.print();
       })
-      .catch(() => {
-        document.body.innerHTML = '<h2 style="text-align:center;">Error loading booking</h2>';
+      .catch(err => {
+        console.error(err);
+        document.body.innerHTML = '<h2 style="text-align:center;">Could not load booking</h2>';
       });
   </script>
 </body>
