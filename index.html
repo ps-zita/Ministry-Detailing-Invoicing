@@ -5,18 +5,18 @@
   <title>Australian Invoice Generator</title>
   <style>
     body {
-      background: #f5f5f5;
       margin: 0;
-      padding: 20px 0;
+      padding: 20px;
+      background: #f5f5f5;
       font-family: Arial, sans-serif;
     }
     #invoice {
       background: #fff;
-      width: 595px;            /* match A4 width in points */
+      width: 595px;            /* A4 width in points */
       margin: 0 auto;
       padding: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      /* border removed */
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      /* no border */
     }
     .header {
       display: flex;
@@ -100,9 +100,9 @@
         <tr>
           <th>Description</th>
           <th>Qty</th>
-          <th>Unit Price</th>
+          <th>Unit Price (AUD)</th>
           <th>GST (10%)</th>
-          <th>Total</th>
+          <th>Total (AUD)</th>
         </tr>
       </thead>
       <tbody>
@@ -140,33 +140,31 @@
 
     <p style="clear: both;">
       <strong>Bank Details:</strong><br>
-      AusBank | BSB: 123-456 | Acct: 987654321
+      AusBank | BSB: 123-456 | Account: 987654321
     </p>
   </div>
 
   <button id="download">Download PDF</button>
 
-  <!-- scripts must be loaded in this order -->
+  <!-- load html2canvas first -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- then load jsPDF UMD bundle -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+  <!-- extract jsPDF constructor -->
   <script>
+    const { jsPDF } = window.jspdf;
+
     document.getElementById('download').addEventListener('click', () => {
       const invoiceEl = document.getElementById('invoice');
-      html2canvas(invoiceEl, {
-        scale: 2,
-        allowTaint: true
-      }).then(canvas => {
+      html2canvas(invoiceEl, { scale: 2 }).then(canvas => {
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'pt', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = canvas.height * pdfWidth / canvas.width;
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save('invoice.pdf');
-      })
-      .catch(err => console.error(err));
+      }).catch(err => console.error(err));
     });
   </script>
-
 </body>
 </html>
