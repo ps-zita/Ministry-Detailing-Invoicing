@@ -16,28 +16,70 @@
       padding: 20px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       display: none;
+      position: relative; /* for absolute positioning of children */
     }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .logo { max-height: 130px; }
-    .supplier, .client { line-height: 1.4; }
-    h1 { margin: 20px 0 10px; }
+    /* Wrapper for invoice content so watermark appears underneath */
+    #invoice-content {
+      position: relative;
+      z-index: 1;
+    }
+    .header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start; 
+    }
+    .logo { 
+      max-height: 130px; 
+    }
+    .supplier, .client { 
+      line-height: 1.4; 
+    }
+    h1 { 
+      margin: 20px 0 10px; 
+    }
     table {
-      width: 100%; border-collapse: collapse; margin: 15px 0;
+      width: 100%; 
+      border-collapse: collapse; 
+      margin: 15px 0;
     }
-    th, td { border: 1px solid #ccc; padding: 6px; }
-    th { background: #eee; }
-    .right { text-align: right; }
+    th, td { 
+      border: 1px solid #ccc; 
+      padding: 6px; 
+    }
+    th { 
+      background: #eee; 
+    }
+    .right { 
+      text-align: right; 
+    }
     .totals {
-      float: right; width: 260px; margin-top: 10px;
+      float: right; 
+      width: 260px; 
+      margin-top: 10px;
     }
-    .totals td { border: none; padding: 4px 8px; }
-    #qrcode { text-align: center; margin: 20px auto; }
+    .totals td { 
+      border: none; 
+      padding: 4px 8px; 
+    }
+    #qrcode { 
+      text-align: center; 
+      margin: 20px auto; 
+    }
     #download, #print {
       display: none;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
       margin: 10px 5px;
+    }
+    /* Watermark image styling */
+    #log2 {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      opacity: 0.5;
+      z-index: 0; /* behind invoice content */
     }
     @media print {
       body * { visibility: hidden !important; }
@@ -62,52 +104,56 @@
 <body>
 
   <div id="invoice">
-    <div class="header">
-      <img src="log.png" alt="Logo" class="logo" />
-      <div class="supplier">
-        <strong id="company-name">Ministry of Detailing</strong><br>
-        ABN: 98 765 432 100<br>
-        473A Centre Rd, Bentleigh VIC 3204<br>
-        <span id="company-phone"></span><br>
-        <!-- hard-coded email -->
-        <span id="company-email">enquiries@ministryofdetailing.com.au</span>
+    <div id="invoice-content">
+      <div class="header">
+        <img src="log.png" alt="Logo" class="logo" />
+        <div class="supplier">
+          <strong id="company-name">Ministry of Detailing</strong><br>
+          ABN: 98 765 432 100<br>
+          473A Centre Rd, Bentleigh VIC 3204<br>
+          <span id="company-phone"></span><br>
+          <!-- hard-coded email -->
+          <span id="company-email">enquiries@ministryofdetailing.com.au</span>
+        </div>
       </div>
+
+      <h1>Tax Invoice</h1>
+
+      <div class="client">
+        <strong>Bill To:</strong><br>
+        <span id="client-name"></span><br>
+        <span id="client-phone"></span>
+      </div>
+
+      <p>
+        <strong>Invoice #:</strong> <span id="inv-number"></span><br>
+        <strong>Date:</strong> <span id="inv-date"></span>
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th><th>Qty</th><th>Unit Price</th><th>GST (10%)</th><th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="invoice-lines"></tbody>
+      </table>
+
+      <table class="totals">
+        <tr><td class="right"><strong>Subtotal:</strong></td><td class="right" id="subtotal"></td></tr>
+        <tr><td class="right"><strong>GST (10%):</strong></td><td class="right" id="gst-total"></td></tr>
+        <tr><td class="right"><strong>Total Due:</strong></td><td class="right" id="total-due"></td></tr>
+      </table>
+
+      <div id="qrcode"></div>
+      
+      <p style="clear:both;">
+        <strong>Bank Details:</strong><br>
+        AusBank | BSB: 123-456 | Account: 987654321
+      </p>
     </div>
-
-    <h1>Tax Invoice</h1>
-
-    <div class="client">
-      <strong>Bill To:</strong><br>
-      <span id="client-name"></span><br>
-      <span id="client-phone"></span>
-    </div>
-
-    <p>
-      <strong>Invoice #:</strong> <span id="inv-number"></span><br>
-      <strong>Date:</strong> <span id="inv-date"></span>
-    </p>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Description</th><th>Qty</th><th>Unit Price</th><th>GST (10%)</th><th>Total</th>
-        </tr>
-      </thead>
-      <tbody id="invoice-lines"></tbody>
-    </table>
-
-    <table class="totals">
-      <tr><td class="right"><strong>Subtotal:</strong></td><td class="right" id="subtotal"></td></tr>
-      <tr><td class="right"><strong>GST (10%):</strong></td><td class="right" id="gst-total"></td></tr>
-      <tr><td class="right"><strong>Total Due:</strong></td><td class="right" id="total-due"></td></tr>
-    </table>
-
-    <div id="qrcode"></div>
-
-    <p style="clear:both;">
-      <strong>Bank Details:</strong><br>
-      AusBank | BSB: 123-456 | Account: 987654321
-    </p>
+    <!-- Watermark image (log2) beneath everything -->
+    <img id="log2" src="log2.png" alt="Logo 2" />
   </div>
 
   <div style="text-align:center;">
@@ -137,10 +183,9 @@
         const total = price + gst;
         const fmt   = x => match.booking_price_currency + ' ' + x.toFixed(2);
 
-        // fill invoice
+        // fill invoice fields with booking data
         document.getElementById('company-name').textContent  = match.company_name;
         document.getElementById('company-phone').textContent = match.user_phone;
-        // company-email stays hard-coded
         document.getElementById('client-name').textContent   = match.customer_full_name;
         document.getElementById('client-phone').textContent  = match.customer_phone;
         document.getElementById('inv-number').textContent    = idx.toString().padStart(3,'0');
@@ -159,34 +204,43 @@
         document.getElementById('gst-total').textContent = fmt(gst);
         document.getElementById('total-due').textContent = fmt(total);
 
-        // QR code of this exact URL
+        // QR code of the current URL
         new QRCode(document.getElementById('qrcode'), {
           text: location.href,
           width: 128, height: 128,
           correctLevel: QRCode.CorrectLevel.H
         });
 
-        // reveal UI
+        // reveal the invoice and control buttons
         document.getElementById('invoice').style.display  = 'block';
         document.getElementById('download').style.display = 'inline-block';
         document.getElementById('print').style.display    = 'inline-block';
 
-        // Download PDF @ moderate size + JPEG compression
+        // Download PDF using higher scale for better quality capture
         document.getElementById('download').onclick = () => {
-          html2canvas(document.getElementById('invoice'), {
-            scale: 8, useCORS: true
+          const invoiceElem = document.getElementById('invoice');
+          const invoiceRect = invoiceElem.getBoundingClientRect();
+          const invoiceWidth = invoiceRect.width;
+          const invoiceHeight = invoiceRect.height;
+          
+          // Increase scale factor to capture a higher resolution image including watermark
+          html2canvas(invoiceElem, {
+            useCORS: true,
+            scale: 16  
           }).then(canvas => {
             const imgData = canvas.toDataURL('image/jpeg', 1);
-            const pdf     = new jsPDF('p','pt','a4');
-            const w       = pdf.internal.pageSize.getWidth();
-            const h       = canvas.height * w / canvas.width;
-            pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+            const pdf = new jsPDF('p', 'pt', 'a4');
+            const pdfPageWidth = pdf.internal.pageSize.getWidth();
+            const scaleFactor = pdfPageWidth / invoiceWidth;
+            const pdfImgHeight = invoiceHeight * scaleFactor;
+          
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfPageWidth, pdfImgHeight);
             const invNum = document.getElementById('inv-number').textContent;
             pdf.save(`invoice${invNum}.pdf`);
           });
         };
 
-        // Print
+        // Print invoice
         document.getElementById('print').onclick = () => window.print();
       })
       .catch(err => {
