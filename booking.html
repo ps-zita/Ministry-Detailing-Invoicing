@@ -61,6 +61,7 @@
       border: none; 
       padding: 4px 8px; 
     }
+    /* Default QR code alignment is centered; will override in mobile */
     #qrcode { 
       text-align: center; 
       margin: 20px auto; 
@@ -94,6 +95,33 @@
       }
       #download, #print { display: none !important; }
     }
+    /* Mobile adjustments */
+    @media only screen and (max-width: 600px) {
+      /* Reduce font-size for invoice texts except table content */
+      h1 {
+        font-size: 16px;
+        margin: 10px 0 5px;
+      }
+      .client, 
+      .supplier,
+      p {
+        font-size: 14px;
+      }
+      /* Bank details text reduced */
+      p[style] {
+        font-size: 14px;
+      }
+      /* QR code moved to far left */
+      #qrcode {
+        text-align: left;
+        margin: 20px 0;
+      }
+      /* Adjust invoice width to fit mobile screens */
+      #invoice {
+        width: 100%;
+        padding: 10px;
+      }
+    }
   </style>
 
   <!-- dependencies -->
@@ -112,7 +140,6 @@
           ABN: 98 765 432 100<br>
           473A Centre Rd, Bentleigh VIC 3204<br>
           <span id="company-phone"></span><br>
-          <!-- hard-coded email -->
           <span id="company-email">enquiries@ministryofdetailing.com.au</span>
         </div>
       </div>
