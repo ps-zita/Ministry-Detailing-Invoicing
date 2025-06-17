@@ -142,10 +142,10 @@
       <table>
         <thead>
           <tr>
-            <th>Description</th>
+            <!-- Added an id for the first header cell -->
+            <th id="desc-header">Description</th>
             <th>Qty</th>
             <th>Unit Price</th>
-            <th>GST (10%)</th>
             <th>Total</th>
           </tr>
         </thead>
@@ -154,15 +154,7 @@
 
       <table class="totals">
         <tr>
-          <td class="right"><strong>Subtotal:</strong></td>
-          <td class="right" id="subtotal">$0.00</td>
-        </tr>
-        <tr>
-          <td class="right"><strong>GST (10%):</strong></td>
-          <td class="right" id="gst-total">$0.00</td>
-        </tr>
-        <tr>
-          <td class="right"><strong>Total Due:</strong></td>
+          <td class="right"><strong>Total Due (GST included):</strong></td>
           <td class="right" id="total-due"><strong>$0.00</strong></td>
         </tr>
       </table>
@@ -181,9 +173,20 @@
     </div>
 
     <script>
+      // Compact list-like service descriptions.
+      const serviceDescriptions = {
+        "GOLD WASH": "• Exterior: Wash and dry with tyre Glow; • Interior: Basic vacuum and window wipe.",
+        "BASIC WASH": "• Exterior: Hand wash and dry with tyre Glow.",
+        "PREMIUM INTERIOR": "• Interior: Brush, blow, and vacuum fabrics/leather/trims; deep wipe; clean dash/centre console; add premium air freshener; also includes Basic Exterior wash and windows.",
+        "PREMIUM MAX": "• Combined Premium Interior & Exterior detailing.",
+        "PREMIUM EXTERIOR": "• Exterior: Hand wash; clay; hand polish & spray wax; plus Basic Interior vacuum/wipe and window clean.",
+        "EXTERIOR HAND POLISH": "• Exterior: Hand wash; clay; hand polish; spray sealant; finished with tyre Glow.",
+        "INTERIOR DETAIL": "• Interior: Brush, blow, vacuum, and steam clean fabrics; shampoo & condition trims; detail dashboard, centre console, and air vents; sanitise and remove odour.",
+        "EXTERIOR DETAIL": "• Exterior: Hand wash; clay; one-stage cut & polish; finish with spray wax and tyre Glow."
+      };
+
       const API = "https://mnstry.duckdns.org:3001/bookings";
-      const BASE =
-        "https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html?slug=";
+      const BASE = "https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html?slug=";
 
       const today = new Date();
       const yesterday = new Date(today - 86400000);
@@ -194,13 +197,9 @@
 
       document.getElementById("toggle-old").onclick = () => {
         showingOld = !showingOld;
-        document.getElementById("bookings-old").style.display = showingOld
-          ? "flex"
-          : "none";
+        document.getElementById("bookings-old").style.display = showingOld ? "flex" : "none";
         document.getElementById("toggle-old").textContent =
-          (showingOld ? "Hide" : "Show") +
-          " older bookings " +
-          (showingOld ? "▲" : "▼");
+          (showingOld ? "Hide" : "Show") + " older bookings " + (showingOld ? "▲" : "▼");
       };
 
       fetch(API)
@@ -212,7 +211,6 @@
             const dt = new Date(b.booking_date_start_tz);
             const card = document.createElement("div");
             card.className = "booking-card";
-            // Access the booking comment directly from the JSON using bracket notation.
             const bookingComment = b["booking_attributes.booking_comment"];
             card.innerHTML = `<strong>${b.customer_full_name}</strong><br>${b.time}<br>${bookingComment}`;
             card.onclick = () => selectBooking(b, idx);
@@ -228,48 +226,57 @@
         currentName = b.customer_first_name || "";
         currentBooking = b; // Store current booking for SMS
 
-        // Supplier information
+        // Update supplier information
         document.getElementById("company-name").textContent = b.company_name;
         document.getElementById("company-phone").textContent = b.user_phone;
 
-        // Invoice header
+        // Update invoice header
         document.getElementById("inv-number").textContent = padded;
-        document.getElementById("inv-date").textContent =
-          b.booking_date_start_formatted;
+        document.getElementById("inv-date").textContent = b.booking_date_start_formatted;
 
-        // Client information
-        document.getElementById("client-name").textContent =
-          b.customer_full_name;
+        // Update client information
+        document.getElementById("client-name").textContent = b.customer_full_name;
         document.getElementById("client-phone").textContent = b.customer_phone;
 
-        // Line item & totals
-        const price = parseFloat(b.booking_price_float);
-        const gst = price * 0.1;
-        const fmt = (x) =>
-          b.booking_price_currency + " " + x.toFixed(2);
+        // Calculate base price (GST is included in the price shown)
+        const basePrice = parseFloat(b.booking_price_float);
+        const fmt = (x) => b.booking_price_currency + " " + x.toFixed(2);
 
+        // Process service name: check if the first two words match a key in serviceDescriptions (case-insensitive)
+        const serviceName = b.service_name;
+        const tokens = serviceName.split(" ");
+        let extraDescription = "";
+        if (tokens.length >= 2) {
+          const candidateKey = tokens.slice(0, 2).join(" ").toUpperCase();
+          if (serviceDescriptions.hasOwnProperty(candidateKey)) {
+            extraDescription = `<br /><span style="font-size:0.8em; color:grey;">${serviceDescriptions[candidateKey]}</span>`;
+          }
+        }
+
+        // Get booking comment from booking_attributes.booking_comment
+        const bookingComment = b["booking_attributes.booking_comment"] || "";
+
+        // Update the header of the first column ("Description")
+        const headerCell = document.getElementById("desc-header");
+        headerCell.textContent = "Description" + (bookingComment.trim() ? " (" + bookingComment + ")" : "");
+
+        // Build invoice line without repeating booking comment in the service cell.
         document.getElementById("invoice-lines").innerHTML = `
           <tr>
-            <td>${b.service_name}</td>
+            <td>${b.service_name}${extraDescription}</td>
             <td>1</td>
-            <td class="right">${fmt(price)}</td>
-            <td class="right">${fmt(gst)}</td>
-            <td class="right">${fmt(price + gst)}</td>
+            <td class="right">${fmt(basePrice)}</td>
+            <td class="right">${fmt(basePrice)}</td>
           </tr>
         `;
-        document.getElementById("subtotal").textContent = fmt(price);
-        document.getElementById("gst-total").textContent = fmt(gst);
-        document.getElementById("total-due").textContent = fmt(price + gst);
+        document.getElementById("total-due").textContent = fmt(basePrice);
 
-        // Reveal invoice + controls
+        // Reveal invoice and controls
         document.getElementById("invoice").style.display = "block";
         document.getElementById("download").style.display = "inline-block";
-        document.getElementById("email-input").style.display =
-          "inline-block";
-        document.getElementById("send-email").style.display =
-          "inline-block";
-        document.getElementById("send-message").style.display =
-          "inline-block";
+        document.getElementById("email-input").style.display = "inline-block";
+        document.getElementById("send-email").style.display = "inline-block";
+        document.getElementById("send-message").style.display = "inline-block";
 
         document.getElementById("download").onclick = () => {
           window.open(BASE + currentSlug, "_blank");
@@ -281,37 +288,25 @@
           else {
             const url = BASE + currentSlug;
             const subject = encodeURIComponent("Your Invoice");
-            const body = encodeURIComponent(
-              `Hi ${currentName},\n\nView your invoice here: ${url}\n\nThanks!`
-            );
+            const body = encodeURIComponent(`Hi ${currentName},\n\nView your invoice here: ${url}\n\nThanks!`);
             window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
           }
         };
       }
 
       // SMS sending via TouchSMS API using username/password (Basic) authentication.
-      // The access token is used as the username and the token id as the password.
       document.getElementById("send-message").onclick = () => {
         if (!currentBooking) return;
-
-        // Set up Basic Authentication (username: access token, password: token id).
         const username = "27314-35WQKm6PWqhYpWWqsX2";
         const password = "9oO8NDqRJS8uWiDlRsUV";
         const authString = btoa(`${username}:${password}`);
-
         var myHeaders = new Headers();
         myHeaders.append("Accept", "application/json");
         myHeaders.append("Content-Type", "application/json");
         myHeaders.append("Authorization", "Basic " + authString);
-
-        // Build the invoice URL using currentSlug.
-        const invoiceURL =
-          "https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html?slug=" +
-          currentSlug;
+        const invoiceURL = "https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html?slug=" + currentSlug;
         const recipientNumber = currentBooking.customer_phone;
         const messageBody = `Dear ${currentBooking.customer_full_name}, your invoice is ready. View it here: ${invoiceURL}`;
-
-        // Prepare the request payload with an array of messages.
         var raw = JSON.stringify({
           "reject_duplicates_by_recipient": false,
           "messages": [
@@ -322,18 +317,15 @@
             }
           ]
         });
-
         var requestOptions = {
           method: "POST",
           headers: myHeaders,
           body: raw,
           redirect: "follow"
         };
-
         fetch("https://app.touchsms.com.au/api/v2/sms", requestOptions)
           .then(response => {
             if (response.status === 400) {
-              // If a 400 error, consider it a failure.
               response.text().then(text => {
                 alert("SMS failed: " + text);
                 console.log(text);

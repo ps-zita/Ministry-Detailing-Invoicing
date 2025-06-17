@@ -177,10 +177,10 @@
         <table>
           <thead>
             <tr>
-              <th>Description</th>
+              <!-- The header cell for Description now will be updated to include booking comment -->
+              <th id="desc-header">Description</th>
               <th>Qty</th>
               <th>Unit Price</th>
-              <th>GST (10%)</th>
               <th>Total</th>
             </tr>
           </thead>
@@ -189,15 +189,7 @@
 
         <table class="totals">
           <tr>
-            <td class="right"><strong>Subtotal:</strong></td>
-            <td class="right" id="subtotal"></td>
-          </tr>
-          <tr>
-            <td class="right"><strong>GST (10%):</strong></td>
-            <td class="right" id="gst-total"></td>
-          </tr>
-          <tr>
-            <td class="right"><strong>Total Due:</strong></td>
+            <td class="right"><strong>Total Due (GST included):</strong></td>
             <td class="right" id="total-due"></td>
           </tr>
         </table>
@@ -220,32 +212,37 @@
 
     <script>
       const { jsPDF } = window.jspdf;
-      const slug =
-        new URLSearchParams(location.search).get("slug")?.toLowerCase() || "";
+      const slug = new URLSearchParams(location.search).get("slug")?.toLowerCase() || "";
+
+      // Service descriptions with hardcoded service names in all caps.
+      const serviceDescriptions = {
+        "GOLD WASH": "• EXTERIOR: WASH AND DRY WITH TYRE GLOW; • INTERIOR: BASIC VACUUM AND WINDOW WIPE.",
+        "BASIC WASH": "• EXTERIOR: HAND WASH AND DRY WITH TYRE GLOW.",
+        "PREMIUM INTERIOR": "• INTERIOR: BRUSH, BLOW, AND VACUUM FABRICS/LEATHER/TRIMS; DEEP WIPE; CLEAN DASH/CENTRE CONSOLE; ADD PREMIUM AIR FRESHENER; ALSO INCLUDES BASIC EXTERIOR WASH AND WINDOWS.",
+        "PREMIUM MAX": "• COMBINED PREMIUM INTERIOR & EXTERIOR DETAILING.",
+        "PREMIUM EXTERIOR": "• EXTERIOR: HAND WASH; CLAY; HAND POLISH & SPRAY WAX; PLUS BASIC INTERIOR VACUUM/WIPE AND WINDOW CLEAN.",
+        "EXTERIOR HAND POLISH": "• EXTERIOR: HAND WASH; CLAY; HAND POLISH; SPRAY SEALANT; FINISHED WITH TYRE GLOW.",
+        "INTERIOR DETAIL": "• INTERIOR: BRUSH, BLOW, VACUUM, AND STEAM CLEAN FABRICS; SHAMPOO & CONDITION TRIMS; DETAIL DASHBOARD, CENTRE CONSOLE, AND AIR VENTS; SANITISE AND REMOVE ODOUR.",
+        "EXTERIOR DETAIL": "• EXTERIOR: HAND WASH; CLAY; ONE-STAGE CUT & POLISH; FINISH WITH SPRAY WAX AND TYRE GLOW."
+      };
 
       fetch("https://mnstry.duckdns.org:3001/bookings")
         .then((r) => r.json())
         .then((bookings) => {
           const match = bookings.find((b, i) => {
-            const id =
-              i.toString().padStart(3, "0") +
-              (b.customer_first_name || "").toLowerCase();
+            const id = i.toString().padStart(3, "0") + (b.customer_first_name || "").toLowerCase();
             return slug === id;
           });
           if (!match) {
-            document.body.innerHTML =
-              '<h2 style="text-align:center;">Booking not found</h2>';
+            document.body.innerHTML = '<h2 style="text-align:center;">Booking not found</h2>';
             return;
           }
 
           const idx = bookings.indexOf(match);
-          const price = parseFloat(match.booking_price_float);
-          const gst = price * 0.1;
-          const total = price + gst;
-          const fmt = (x) =>
-            match.booking_price_currency + " " + x.toFixed(2);
+          const basePrice = parseFloat(match.booking_price_float);
+          const fmt = (x) => match.booking_price_currency + " " + x.toFixed(2);
 
-          // fill invoice fields with booking data
+          // Fill invoice fields with booking data.
           document.getElementById("company-name").textContent = match.company_name;
           document.getElementById("company-phone").textContent = match.user_phone;
           document.getElementById("client-name").textContent = match.customer_full_name;
@@ -253,40 +250,55 @@
           document.getElementById("inv-number").textContent = idx.toString().padStart(3, "0");
           document.getElementById("inv-date").textContent = match.booking_date_start_formatted;
 
+          // Hardcode service name to all caps.
+          let serviceName = match.service_name.toUpperCase();
+          const tokens = serviceName.split(" ");
+          let extraDescription = "";
+          if (tokens.length >= 2) {
+            const candidateKey = tokens.slice(0, 2).join(" ");
+            if (serviceDescriptions.hasOwnProperty(candidateKey)) {
+              extraDescription = `<br /><span style="font-size:0.8em; color:grey;">${serviceDescriptions[candidateKey]}</span>`;
+            }
+          }
+
+          // Get booking comment and use it to update the description header.
+          const bookingComment = match["booking_attributes.booking_comment"] || "";
+          const headerCell = document.getElementById("desc-header");
+          headerCell.textContent = bookingComment.trim() ? `Description (${bookingComment})` : "Description";
+
+          // Build invoice line.
           document.getElementById("invoice-lines").innerHTML = `
             <tr>
-              <td>${match.service_name}</td>
+              <td>${serviceName}${extraDescription}</td>
               <td>1</td>
-              <td class="right">${fmt(price)}</td>
-              <td class="right">${fmt(gst)}</td>
-              <td class="right">${fmt(total)}</td>
+              <td class="right">${fmt(basePrice)}</td>
+              <td class="right">${fmt(basePrice)}</td>
             </tr>
           `;
-          document.getElementById("subtotal").textContent = fmt(price);
-          document.getElementById("gst-total").textContent = fmt(gst);
-          document.getElementById("total-due").textContent = fmt(total);
+          
+          // Set total due (GST included)
+          document.getElementById("total-due").textContent = fmt(basePrice);
 
-          // QR code of the current URL
+          // Create QR code that always links to the desired URL.
           new QRCode(document.getElementById("qrcode"), {
-            text: location.href,
+            text: "https://www.google.com/maps/place/Ministry+Of+Detailing/@-37.9186156,145.0393986,17z/data=!4m8!3m7!1s0x6ad668343f78eb9f:0xa49e303d9b905270!8m2!3d-37.9186156!4d145.0419735!9m1!1b1!16s%2Fg%2F11cmy8zd0n?entry=ttu&g_ep=EgoyMDI1MDYxMS4wIKXMDSoASAFQAw%3D%3D",
             width: 128,
             height: 128,
             correctLevel: QRCode.CorrectLevel.H,
           });
 
-          // reveal the invoice and control buttons
+          // Reveal the invoice and control buttons.
           document.getElementById("invoice").style.display = "block";
           document.getElementById("download").style.display = "inline-block";
           document.getElementById("print").style.display = "inline-block";
 
-          // Download PDF using higher scale for better quality capture
+          // Download PDF using higher scale for better quality capture.
           document.getElementById("download").onclick = () => {
             const invoiceElem = document.getElementById("invoice");
             const invoiceRect = invoiceElem.getBoundingClientRect();
             const invoiceWidth = invoiceRect.width;
             const invoiceHeight = invoiceRect.height;
 
-            // Increase scale factor to capture a higher resolution image including watermark
             html2canvas(invoiceElem, {
               useCORS: true,
               scale: 16,
@@ -303,13 +315,12 @@
             });
           };
 
-          // Print invoice
+          // Print invoice.
           document.getElementById("print").onclick = () => window.print();
         })
         .catch((err) => {
           console.error(err);
-          document.body.innerHTML =
-            '<h2 style="text-align:center;">Could not load booking</h2>';
+          document.body.innerHTML = '<h2 style="text-align:center;">Could not load booking</h2>';
         });
     </script>
   </body>
