@@ -11,7 +11,7 @@
       }
       /* Make preview use full width but constrained by a max-width of 595px */
       #invoice {
-        background: white;
+        background: #fff;
         width: 100%;
         max-width: 595px;
         margin: 0 auto;
@@ -219,7 +219,7 @@
         "GOLD WASH": "• EXTERIOR: WASH AND DRY WITH TYRE GLOW; • INTERIOR: BASIC VACUUM AND WINDOW WIPE.",
         "BASIC WASH": "• EXTERIOR: HAND WASH AND DRY WITH TYRE GLOW.",
         "BASIC EXTERIOR": "• Exterior: Hand wash and dry with tyre Glow.",
-        "FULL DETAIL": "Exterior Wash, clay, cut and polish with spray wax finish, wheels and rims, door jambs, Interior fabrics brush, blow and steam clean, all leather and plastic trims shampoo and conditioner, detail the dashboard, centre console and air vents, sanitise and Oduor remover, windows with water repellent.",
+        "FULL DETAIL": "Exterior Wash, clay, cut and polish with spray wax finish, wheels and rims, door jambs, Interior fabrics brush, blow and steam clean, all leather and plastic trims shampoo and conditioner, detail the dashboard, centre console and air vents, sanitise and Odour remover, windows with water repellent.",
         "PREMIUM INTERIOR": "• INTERIOR: BRUSH, BLOW, AND VACUUM FABRICS/LEATHER/TRIMS; DEEP WIPE; CLEAN DASH/CENTRE CONSOLE; ADD PREMIUM AIR FRESHENER; ALSO INCLUDES BASIC EXTERIOR WASH AND WINDOWS.",
         "PREMIUM MAX": "• COMBINED PREMIUM INTERIOR & EXTERIOR DETAILING.",
         "PREMIUM EXTERIOR": "• EXTERIOR: HAND WASH; CLAY; HAND POLISH & SPRAY WAX; PLUS BASIC INTERIOR VACUUM/WIPE AND WINDOW CLEAN.",
@@ -263,13 +263,58 @@
             }
           }
 
-          // Get booking comment and use it to update the description header.
-          const bookingComment = match["booking_attributes.booking_comment"] || "";
-          const headerCell = document.getElementById("desc-header");
-          headerCell.textContent = bookingComment.trim() ? `Description (${bookingComment})` : "Description";
+          // Get booking comment and detect any add-ons.
+          // First, extract addons text if it exists.
+          let bookingComment = match["booking_attributes.booking_comment"] || "";
+          let addonsExist = false;
+          let addonsRows = "";
+          const addonsMatch = bookingComment.match(/Addons:\s*([^|]+)/i);
+          if (addonsMatch) {
+            const addonText = addonsMatch[1].trim();
+            addonsExist = true;
+            // Split by comma for multiple add-ons.
+            const addonItems = addonText.split(",");
+            // Initialize running total with base service price.
+            var runningTotal = basePrice;
+            addonItems.forEach((item) => {
+              let addonItem = item.trim();
+              if (addonItem.includes(":")) {
+                let parts = addonItem.split(":");
+                let addonService = parts[0].trim();
+                let addonPriceStr = parts[1].trim();
+                let addonPrice = parseFloat(addonPriceStr.replace(/[^0-9.]/g, ""));
+                runningTotal += addonPrice;
+                addonsRows += `<tr>
+                  <td>${addonService}</td>
+                  <td>1</td>
+                  <td class="right">${fmt(addonPrice)}</td>
+                  <td class="right">${fmt(runningTotal)}</td>
+                </tr>`;
+              } else {
+                // If no price is provided, just output a row with dashes and current total.
+                addonsRows += `<tr>
+                  <td>${addonItem}</td>
+                  <td>1</td>
+                  <td class="right">-</td>
+                  <td class="right">${fmt(runningTotal)}</td>
+                </tr>`;
+              }
+            });
+            // Remove the addons portion from bookingComment.
+            bookingComment = bookingComment.replace(/Addons:\s*[^|]+(\|\s*Amount Due:.*)?/i, "").trim();
+          } else {
+            // If no add-ons exist, our running total is the base service price.
+            var runningTotal = basePrice;
+          }
 
-          // Build invoice line.
-          document.getElementById("invoice-lines").innerHTML = `
+          // Update the header of the first column ("Description").
+          const headerCell = document.getElementById("desc-header");
+          headerCell.textContent = bookingComment ? `Description (${bookingComment})` : "Description";
+
+          // Build invoice line rows.
+          let invoiceRows = "";
+          // Main service row.
+          invoiceRows += `
             <tr>
               <td>${serviceName}${extraDescription}</td>
               <td>1</td>
@@ -277,11 +322,15 @@
               <td class="right">${fmt(basePrice)}</td>
             </tr>
           `;
-          
-          // Set total due (GST included)
-          document.getElementById("total-due").textContent = fmt(basePrice);
+          // Add addon rows if they exist.
+          if (addonsExist) {
+            invoiceRows += addonsRows;
+          }
+          document.getElementById("invoice-lines").innerHTML = invoiceRows;
+          // Set the final total.
+          document.getElementById("total-due").textContent = fmt(runningTotal);
 
-          // Create QR code that always links to the desired URL.
+          // Create QR code.
           new QRCode(document.getElementById("qrcode"), {
             text: "https://g.co/kgs/jNDhQPP",
             width: 128,
@@ -289,18 +338,16 @@
             correctLevel: QRCode.CorrectLevel.H,
           });
 
-          // Reveal the invoice and control buttons.
+          // Reveal invoice and buttons.
           document.getElementById("invoice").style.display = "block";
           document.getElementById("download").style.display = "inline-block";
           document.getElementById("print").style.display = "inline-block";
 
-          // Download PDF using higher scale for better quality capture.
           document.getElementById("download").onclick = () => {
             const invoiceElem = document.getElementById("invoice");
             const invoiceRect = invoiceElem.getBoundingClientRect();
             const invoiceWidth = invoiceRect.width;
             const invoiceHeight = invoiceRect.height;
-
             html2canvas(invoiceElem, {
               useCORS: true,
               scale: 16,
@@ -310,14 +357,12 @@
               const pdfPageWidth = pdf.internal.pageSize.getWidth();
               const scaleFactor = pdfPageWidth / invoiceWidth;
               const pdfImgHeight = invoiceHeight * scaleFactor;
-
               pdf.addImage(imgData, "JPEG", 0, 0, pdfPageWidth, pdfImgHeight);
               const invNum = document.getElementById("inv-number").textContent;
               pdf.save(`invoice${invNum}.pdf`);
             });
           };
 
-          // Print invoice.
           document.getElementById("print").onclick = () => window.print();
         })
         .catch((err) => {

@@ -142,7 +142,6 @@
       <table>
         <thead>
           <tr>
-            <!-- Added an id for the first header cell -->
             <th id="desc-header">Description</th>
             <th>Qty</th>
             <th>Unit Price</th>
@@ -178,13 +177,13 @@
         "GOLD WASH": "• Exterior: Wash and dry with tyre Glow; • Interior: Basic vacuum and window wipe.",
         "BASIC WASH": "• Exterior: Hand wash and dry with tyre Glow.",
         "BASIC EXTERIOR": "• Exterior: Hand wash and dry with tyre Glow.",
-        "FULL DETAIL": "Exterior Wash, clay, cut and polish with spray wax finish, wheels and rims, door jambs, Interior fabrics brush, blow and steam clean, all leather and plastic trims shampoo and conditioner, detail the dashboard, centre console and air vents, sanitise and Oduor remover, windows with water repellent.",
+        "FULL DETAIL": "Exterior Wash, clay, cut and polish with spray wax finish, wheels and rims, door jambs, Internal fabrics brush, blow and steam clean, all leather and plastic trims shampoo and conditioner, detail the dashboard, centre console and air vents, sanitise and Odour remover, windows with water repellent.",
         "PREMIUM INTERIOR": "• Interior: Brush, blow, and vacuum fabrics/leather/trims; deep wipe; clean dash/centre console; add premium air freshener; also includes Basic Exterior wash and windows.",
         "PREMIUM MAX": "• Combined Premium Interior & Exterior detailing.",
         "PREMIUM EXTERIOR": "• Exterior: Hand wash; clay; hand polish & spray wax; plus Basic Interior vacuum/wipe and window clean.",
         "EXTERIOR HAND POLISH": "• Exterior: Hand wash; clay; hand polish; spray sealant; finished with tyre Glow.",
         "INTERIOR DETAIL": "• Interior: Brush, blow, vacuum, and steam clean fabrics; shampoo & condition trims; detail dashboard, centre console, and air vents; sanitise and remove odour.",
-        "EXTERIOR DETAIL": "• Exterior: Hand wash; clay; one-stage cut & polish; finish with spray wax and tyre Glow."
+        "EXTERIOR DETAIL": "• Exterior: Hand wash; clay; one-stage cut & polish; finished with spray wax and tyre Glow."
       };
 
       const API = "https://mnstry.duckdns.org:3001/bookings";
@@ -195,7 +194,7 @@
       let showingOld = false;
       let currentSlug = "";
       let currentName = "";
-      let currentBooking = null; // For SMS sending
+      let currentBooking = null;
 
       document.getElementById("toggle-old").onclick = () => {
         showingOld = !showingOld;
@@ -226,25 +225,41 @@
         const name = (b.customer_first_name || "").toLowerCase();
         currentSlug = padded + name;
         currentName = b.customer_first_name || "";
-        currentBooking = b; // Store current booking for SMS
+        currentBooking = b;
 
-        // Update supplier information
+        // Update supplier info.
         document.getElementById("company-name").textContent = b.company_name;
         document.getElementById("company-phone").textContent = b.user_phone;
 
-        // Update invoice header
+        // Update invoice header.
         document.getElementById("inv-number").textContent = padded;
         document.getElementById("inv-date").textContent = b.booking_date_start_formatted;
 
-        // Update client information
+        // Update client info.
         document.getElementById("client-name").textContent = b.customer_full_name;
         document.getElementById("client-phone").textContent = b.customer_phone;
 
-        // Calculate base price (GST is included in the price shown)
-        const basePrice = parseFloat(b.booking_price_float);
+        // Get booking comment (description).
+        let bookingComment = b["booking_attributes.booking_comment"] || "";
+
+        // Determine base service price.
+        // If a price is found in the booking description (using "Booking Price:" or "- $" formats),
+        // use that price and ignore any JSON "booking_price" values.
+        let baseServicePrice = 0;
+        let priceMatch = bookingComment.match(/Booking Price:\s*\$?([0-9]+(?:\.[0-9]{2})?)/i);
+        if (!priceMatch) {
+          priceMatch = bookingComment.match(/-\s*\$?([0-9]+(?:\.[0-9]{2})?)/);
+        }
+        if (priceMatch) {
+          baseServicePrice = parseFloat(priceMatch[1]);
+        } else {
+          baseServicePrice = parseFloat(b.booking_price_float);
+        }
+
+        // Function to format prices.
         const fmt = (x) => b.booking_price_currency + " " + x.toFixed(2);
 
-        // Process service name: check if the first two words match a key in serviceDescriptions (case-insensitive)
+        // Service name and optional description.
         const serviceName = b.service_name;
         const tokens = serviceName.split(" ");
         let extraDescription = "";
@@ -255,25 +270,70 @@
           }
         }
 
-        // Get booking comment from booking_attributes.booking_comment
-        const bookingComment = b["booking_attributes.booking_comment"] || "";
+        // Extract add-ons from booking comment.
+        // Expect add-ons in the format "Addon Prices:" or "Addons:" followed by text until a pipe or end.
+        const addonsRegex = /(Addon Prices:|Addons:)\s*([^|]+)/gi;
+        let addonsMatches = [];
+        let match;
+        while ((match = addonsRegex.exec(bookingComment)) !== null) {
+          addonsMatches.push(match[2].trim());
+        }
+        // Remove add-on portions from bookingComment (if needed).
+        bookingComment = bookingComment.replace(/(Addon Prices:|Addons:)\s*[^|]+(\|\s*Amount Due:.*)?/gi, "").trim();
 
-        // Update the header of the first column ("Description")
-        const headerCell = document.getElementById("desc-header");
-        headerCell.textContent = "Description" + (bookingComment.trim() ? " (" + bookingComment + ")" : "");
+        // Build invoice rows with a running total per row.
+        let invoiceRows = "";
+        let runningTotal = 0;
 
-        // Build invoice line without repeating booking comment in the service cell.
-        document.getElementById("invoice-lines").innerHTML = `
+        // Main service row.
+        runningTotal += baseServicePrice;
+        invoiceRows += `
           <tr>
-            <td>${b.service_name}${extraDescription}</td>
+            <td>${serviceName}${extraDescription}</td>
             <td>1</td>
-            <td class="right">${fmt(basePrice)}</td>
-            <td class="right">${fmt(basePrice)}</td>
+            <td class="right">${fmt(baseServicePrice)}</td>
+            <td class="right">${fmt(runningTotal)}</td>
           </tr>
         `;
-        document.getElementById("total-due").textContent = fmt(basePrice);
 
-        // Reveal invoice and controls
+        // Process add-on rows.
+        addonsMatches.forEach(addonsStr => {
+          // Allow for multiple add-ons, separated by commas.
+          let addonItems = addonsStr.split(",");
+          addonItems.forEach(item => {
+            let addonItem = item.trim();
+            if (addonItem.includes(":")) {
+              let parts = addonItem.split(":");
+              let addonService = parts[0].trim();
+              let addonPriceStr = parts[1].trim();
+              let addonPrice = parseFloat(addonPriceStr.replace(/[^0-9.]/g, ""));
+              runningTotal += addonPrice;
+              invoiceRows += `
+                <tr>
+                  <td>${addonService}</td>
+                  <td>1</td>
+                  <td class="right">${fmt(addonPrice)}</td>
+                  <td class="right">${fmt(runningTotal)}</td>
+                </tr>
+              `;
+            } else {
+              invoiceRows += `
+                <tr>
+                  <td>${addonItem}</td>
+                  <td>1</td>
+                  <td class="right">-</td>
+                  <td class="right">${fmt(runningTotal)}</td>
+                </tr>
+              `;
+            }
+          });
+        });
+
+        // Update the invoice table and the totals.
+        document.getElementById("invoice-lines").innerHTML = invoiceRows;
+        document.getElementById("total-due").textContent = fmt(runningTotal);
+
+        // Reveal invoice and controls.
         document.getElementById("invoice").style.display = "block";
         document.getElementById("download").style.display = "inline-block";
         document.getElementById("email-input").style.display = "inline-block";
@@ -283,11 +343,11 @@
         document.getElementById("download").onclick = () => {
           window.open(BASE + currentSlug, "_blank");
         };
-
         document.getElementById("send-email").onclick = () => {
           const email = document.getElementById("email-input").value.trim();
-          if (!email.includes("@")) alert("Enter valid email");
-          else {
+          if (!email.includes("@")) {
+            alert("Enter valid email");
+          } else {
             const url = BASE + currentSlug;
             const subject = encodeURIComponent("Your Invoice");
             const body = encodeURIComponent(`Hi ${currentName},\n\nView your invoice here: ${url}\n\nThanks!`);
@@ -296,7 +356,7 @@
         };
       }
 
-      // SMS sending via TouchSMS API using username/password (Basic) authentication.
+      // SMS sending via TouchSMS API.
       document.getElementById("send-message").onclick = () => {
         if (!currentBooking) return;
         const username = "27314-35WQKm6PWqhYpWWqsX2";
@@ -306,7 +366,7 @@
         myHeaders.append("Accept", "application/json");
         myHeaders.append("Content-Type", "application/json");
         myHeaders.append("Authorization", "Basic " + authString);
-        const invoiceURL = "https://ps-zita.github.io/Ministry-Detailing-Invoicing/booking.html?slug=" + currentSlug;
+        const invoiceURL = BASE + currentSlug;
         const recipientNumber = currentBooking.customer_phone;
         const messageBody = `Dear ${currentBooking.customer_full_name}, your invoice is ready. View it here: ${invoiceURL}`;
         var raw = JSON.stringify({
