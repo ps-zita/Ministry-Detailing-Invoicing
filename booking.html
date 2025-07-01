@@ -9,7 +9,6 @@
         background: #f5f5f5;
         padding: 20px;
       }
-      /* Make preview use full width but constrained by a max-width of 595px */
       #invoice {
         background: #fff;
         width: 100%;
@@ -18,9 +17,8 @@
         padding: 20px;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         display: none;
-        position: relative; /* for absolute positioning of children */
+        position: relative;
       }
-      /* Wrapper for invoice content so watermark appears underneath */
       #invoice-content {
         position: relative;
         z-index: 1;
@@ -39,7 +37,6 @@
       }
       h1 {
         margin: 20px 0 10px;
-        /* Set a consistent font-size in px */
         font-size: 24px;
       }
       table {
@@ -69,7 +66,6 @@
         padding: 4px 8px;
         font-size: 14px;
       }
-      /* Default QR code alignment is centered; will override in mobile */
       #qrcode {
         text-align: left;
         margin: 20px 0;
@@ -82,14 +78,13 @@
         cursor: pointer;
         margin: 10px 5px;
       }
-      /* Watermark image styling */
       #log2 {
         position: absolute;
         bottom: 0;
         left: 0;
         width: 100%;
         opacity: 0.5;
-        z-index: 0; /* behind invoice content */
+        z-index: 0;
       }
       @media print {
         body * {
@@ -113,9 +108,7 @@
           display: none !important;
         }
       }
-      /* Mobile adjustments */
       @media only screen and (max-width: 600px) {
-        /* Reduce general font-size for invoice texts */
         h1 {
           font-size: 18px;
           margin: 10px 0 5px;
@@ -125,24 +118,15 @@
         p {
           font-size: 14px;
         }
-        /* Bank details text reduced */
-        p[style] {
-          font-size: 14px;
-        }
-        /* Align QR code to left */
         #qrcode {
           text-align: left;
           margin: 20px 0;
         }
-        /* Adjust invoice padding for mobile */
         #invoice {
-          width: 100%;
           padding: 10px;
         }
       }
     </style>
-
-    <!-- dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -160,25 +144,20 @@
             <span id="company-email">enquiries@ministryofdetailing.com.au</span>
           </div>
         </div>
-
         <h1>Tax Invoice</h1>
-
         <div class="client">
           <strong>Bill To:</strong><br />
           <span id="client-name"></span><br />
           <span id="client-phone"></span>
         </div>
-
         <p>
           <strong>Invoice #:</strong> <span id="inv-number"></span><br />
           <strong>Date:</strong> <span id="inv-date"></span>
         </p>
-
         <table>
           <thead>
             <tr>
-              <!-- The header cell for Description now will be updated to include booking comment -->
-              <th id="desc-header">Description</th>
+              <th>Description</th>
               <th>Qty</th>
               <th>Unit Price</th>
               <th>Total</th>
@@ -186,40 +165,32 @@
           </thead>
           <tbody id="invoice-lines"></tbody>
         </table>
-
         <table class="totals">
           <tr>
             <td class="right"><strong>Total Due (GST included):</strong></td>
             <td class="right" id="total-due"></td>
           </tr>
         </table>
-
         <div id="qrcode"></div>
-
         <p style="clear:both;">
           <strong>Bank Details:</strong><br />
           Ministry of Detailing | BSB: 063-616 | Account: 10648334
         </p>
       </div>
-      <!-- Watermark image (log2) beneath everything -->
       <img id="log2" src="log2.png" alt="Logo 2" />
     </div>
-
     <div style="text-align: center;">
       <button id="download">Download PDF</button>
       <button id="print">Print Invoice</button>
     </div>
-
     <script>
       const { jsPDF } = window.jspdf;
       const slug = new URLSearchParams(location.search).get("slug")?.toLowerCase() || "";
-
-      // Service descriptions with hardcoded service names in all caps.
       const serviceDescriptions = {
         "GOLD WASH": "• EXTERIOR: WASH AND DRY WITH TYRE GLOW; • INTERIOR: BASIC VACUUM AND WINDOW WIPE.",
         "BASIC WASH": "• EXTERIOR: HAND WASH AND DRY WITH TYRE GLOW.",
-        "BASIC EXTERIOR": "• Exterior: Hand wash and dry with tyre Glow.",
-        "FULL DETAIL": "Exterior Wash, clay, cut and polish with spray wax finish, wheels and rims, door jambs, Interior fabrics brush, blow and steam clean, all leather and plastic trims shampoo and conditioner, detail the dashboard, centre console and air vents, sanitise and Odour remover, windows with water repellent.",
+        "BASIC EXTERIOR": "• EXTERIOR: HAND WASH AND DRY WITH TYRE GLOW.",
+        "FULL DETAIL": "EXTERIOR WASH, CLAY, CUT AND POLISH WITH SPRAY WAX FINISH, WHEELS AND RIMS, DOOR JAMBS, INTERIOR FABRICS BRUSH, BLOW AND STEAM CLEAN, ALL LEATHER AND PLASTIC TRIMS SHAMPOO AND CONDITIONER, DETAIL DASHBOARD, CENTRE CONSOLE AND AIR VENTS, SANITISE AND ODOUR REMOVER, WINDOWS WITH WATER REPELLENT.",
         "PREMIUM INTERIOR": "• INTERIOR: BRUSH, BLOW, AND VACUUM FABRICS/LEATHER/TRIMS; DEEP WIPE; CLEAN DASH/CENTRE CONSOLE; ADD PREMIUM AIR FRESHENER; ALSO INCLUDES BASIC EXTERIOR WASH AND WINDOWS.",
         "PREMIUM MAX": "• COMBINED PREMIUM INTERIOR & EXTERIOR DETAILING.",
         "PREMIUM EXTERIOR": "• EXTERIOR: HAND WASH; CLAY; HAND POLISH & SPRAY WAX; PLUS BASIC INTERIOR VACUUM/WIPE AND WINDOW CLEAN.",
@@ -241,10 +212,6 @@
           }
 
           const idx = bookings.indexOf(match);
-          const basePrice = parseFloat(match.booking_price_float);
-          const fmt = (x) => match.booking_price_currency + " " + x.toFixed(2);
-
-          // Fill invoice fields with booking data.
           document.getElementById("company-name").textContent = match.company_name;
           document.getElementById("company-phone").textContent = match.user_phone;
           document.getElementById("client-name").textContent = match.customer_full_name;
@@ -252,80 +219,71 @@
           document.getElementById("inv-number").textContent = idx.toString().padStart(3, "0");
           document.getElementById("inv-date").textContent = match.booking_date_start_formatted;
 
-          // Hardcode service name to all caps.
+          // Description parsing
+          let bookingComment = match["booking_attributes.booking_comment"] || "";
+          let mainPrice = 0;
+          // Try to extract main price from comment, else fallback to JSON
+          let mainPriceMatch = bookingComment.match(/Booking Price:\s*\$?([0-9]+(?:\.[0-9]{2})?)/i);
+          if (!mainPriceMatch) mainPriceMatch = bookingComment.match(/-\s*\$?([0-9]+(?:\.[0-9]{2})?)/);
+          if (mainPriceMatch) mainPrice = parseFloat(mainPriceMatch[1]);
+          else mainPrice = parseFloat(match.booking_price_float);
+          const fmt = (x) => match.booking_price_currency + " " + x.toFixed(2);
+
+          // Main service info
           let serviceName = match.service_name.toUpperCase();
-          const tokens = serviceName.split(" ");
           let extraDescription = "";
+          const tokens = serviceName.split(" ");
           if (tokens.length >= 2) {
             const candidateKey = tokens.slice(0, 2).join(" ");
-            if (serviceDescriptions.hasOwnProperty(candidateKey)) {
-              extraDescription = `<br /><span style="font-size:0.8em; color:grey;">${serviceDescriptions[candidateKey]}</span>`;
-            }
+            if (serviceDescriptions[candidateKey])
+              extraDescription = `<div style="font-size:0.8em; color:grey;">${serviceDescriptions[candidateKey]}</div>`;
           }
 
-          // Get booking comment and detect any add-ons.
-          let bookingComment = match["booking_attributes.booking_comment"] || "";
-          let addonsExist = false;
-          let addonsRows = "";
-          // Initialize running total with base service price.
-          let runningTotal = basePrice;
-          const addonsMatch = bookingComment.match(/Addons:\s*([^|]+)/i);
+          // Extract add-ons from comment
+          let addons = [];
+          let addonsMatch = bookingComment.match(/Add(?:ons|on) Prices?:\s*([^|]+)/i) || bookingComment.match(/Add(?:ons|on)s?:\s*([^|]+)/i);
           if (addonsMatch) {
-            const addonText = addonsMatch[1].trim();
-            addonsExist = true;
-            // Split by comma for multiple add-ons.
-            const addonItems = addonText.split(",");
-            addonItems.forEach((item) => {
-              let addonItem = item.trim();
-              if (addonItem.includes(":")) {
-                let parts = addonItem.split(":");
-                let addonService = parts[0].trim();
-                let addonPriceStr = parts[1].trim();
-                let addonPrice = parseFloat(addonPriceStr.replace(/[^0-9.]/g, ""));
-                runningTotal += addonPrice;
-                addonsRows += `<tr>
-                  <td>${addonService}</td>
-                  <td>1</td>
-                  <td class="right">${fmt(addonPrice)}</td>
-                  <td class="right">${fmt(runningTotal)}</td>
-                </tr>`;
-              } else {
-                addonsRows += `<tr>
-                  <td>${addonItem}</td>
-                  <td>1</td>
-                  <td class="right">-</td>
-                  <td class="right">${fmt(runningTotal)}</td>
-                </tr>`;
-              }
+            addons = addonsMatch[1].split(",").map(x => x.trim()).filter(Boolean).map(item => {
+              let [n, p] = item.split(":");
+              return {
+                name: (n || "").trim(),
+                price: p ? parseFloat(p.replace(/[^0-9.]/g, "")) : null
+              };
             });
-            // Remove the addons portion from bookingComment.
-            bookingComment = bookingComment.replace(/Addons:\s*[^|]+(\|\s*Amount Due:.*)?/i, "").trim();
+            // Remove add-on part from booking comment for cleaner info
+            bookingComment = bookingComment.replace(/Add(?:ons|on) Prices?:\s*[^|]+(\|\s*Amount Due:.*)?/i, "").replace(/Add(?:ons|on)s?:\s*[^|]+(\|\s*Amount Due:.*)?/i, "").trim();
           }
 
-          // Update the header of the first column ("Description").
-          const headerCell = document.getElementById("desc-header");
-          headerCell.textContent = bookingComment ? `Description (${bookingComment})` : "Description";
-
-          // Build invoice line rows.
+          // Build invoice rows, removing bookingComment from line items
           let invoiceRows = "";
-          // Main service row.
+          let total = 0;
           invoiceRows += `
             <tr>
-              <td>${serviceName}${extraDescription}</td>
+              <td>
+                <strong>${serviceName}</strong>
+                ${extraDescription}
+              </td>
               <td>1</td>
-              <td class="right">${fmt(basePrice)}</td>
-              <td class="right">${fmt(basePrice)}</td>
+              <td class="right">${fmt(mainPrice)}</td>
+              <td class="right">${fmt(mainPrice)}</td>
             </tr>
           `;
-          // Add addon rows if they exist.
-          if (addonsExist) {
-            invoiceRows += addonsRows;
+          total += mainPrice;
+          for (const addon of addons) {
+            invoiceRows += `
+              <tr>
+                <td><strong>${addon.name}</strong></td>
+                <td>1</td>
+                <td class="right">${addon.price !== null ? fmt(addon.price) : "-"}</td>
+                <td class="right">${addon.price !== null ? fmt(addon.price) : "-"}</td>
+              </tr>
+            `;
+            if (addon.price !== null) total += addon.price;
           }
           document.getElementById("invoice-lines").innerHTML = invoiceRows;
-          // Set the final total.
-          document.getElementById("total-due").textContent = fmt(runningTotal);
+          document.getElementById("total-due").textContent = fmt(total);
 
-          // Create QR code.
+          // QR code
           new QRCode(document.getElementById("qrcode"), {
             text: "https://g.co/kgs/jNDhQPP",
             width: 128,
@@ -333,12 +291,11 @@
             correctLevel: QRCode.CorrectLevel.H,
           });
 
-          // Reveal invoice and buttons.
+          // Reveal invoice and controls
           document.getElementById("invoice").style.display = "block";
           document.getElementById("download").style.display = "inline-block";
           document.getElementById("print").style.display = "inline-block";
 
-          // PDF Download: Create multi-page PDF preserving the invoice layout with watermark on every page.
           document.getElementById("download").onclick = () => {
             const invoiceElem = document.getElementById("invoice");
             html2canvas(invoiceElem, {
@@ -349,33 +306,24 @@
               const pdf = new jsPDF("p", "pt", "a4");
               const pdfPageWidth = pdf.internal.pageSize.getWidth();
               const pdfPageHeight = pdf.internal.pageSize.getHeight();
-              // Calculate dimensions of the rendered invoice image.
               const canvasWidth = canvas.width;
               const canvasHeight = canvas.height;
               const scaleFactor = pdfPageWidth / canvasWidth;
               const pdfImgHeight = canvasHeight * scaleFactor;
-              
-              // Get watermark source from the watermark image element.
+
               const watermarkSrc = document.getElementById("log2").src;
-              // Define watermark size and position
-              // Here we assume a fixed watermark size – adjust as necessary.
               const watermarkWidth = 200;
               const watermarkHeight = 200;
               const watermarkX = (pdfPageWidth - watermarkWidth) / 2;
               const watermarkY = (pdfPageHeight - watermarkHeight) / 2;
 
               let position = 0;
-              let pageNumber = 1;
               while (position < pdfImgHeight) {
-                // Add the invoice image for the current page.
                 pdf.addImage(imgData, "JPEG", 0, -position, pdfPageWidth, pdfImgHeight);
-                // Add watermark image to the center of the page.
                 pdf.addImage(watermarkSrc, "PNG", watermarkX, watermarkY, watermarkWidth, watermarkHeight);
-                
                 position += pdfPageHeight;
                 if (position < pdfImgHeight) {
                   pdf.addPage();
-                  pageNumber++;
                 }
               }
               const invNum = document.getElementById("inv-number").textContent;
