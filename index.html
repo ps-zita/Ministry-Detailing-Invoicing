@@ -356,51 +356,35 @@
         };
       }
 
-      // SMS sending via TouchSMS API.
+      // SMS sending via backend API.
       document.getElementById("send-message").onclick = () => {
         if (!currentBooking) return;
-        const username = "27314-35WQKm6PWqhYpWWqsX2";
-        const password = "9oO8NDqRJS8uWiDlRsUV";
-        const authString = btoa(`${username}:${password}`);
-        var myHeaders = new Headers();
-        myHeaders.append("Accept", "application/json");
-        myHeaders.append("Content-Type", "application/json");
-        myHeaders.append("Authorization", "Basic " + authString);
         const invoiceURL = BASE + currentSlug;
         const recipientNumber = currentBooking.customer_phone;
         const messageBody = `Dear ${currentBooking.customer_full_name}, your invoice is ready. View it here: ${invoiceURL}`;
-        var raw = JSON.stringify({
-          "reject_duplicates_by_recipient": false,
-          "messages": [
-            {
-              "to": recipientNumber,
-              "from": "0468392508",
-              "body": messageBody
-            }
-          ]
-        });
-        var requestOptions = {
+        
+        fetch("https://mnstry.duckdns.org:3001/send-sms", {
           method: "POST",
-          headers: myHeaders,
-          body: raw,
-          redirect: "follow"
-        };
-        fetch("https://app.touchsms.com.au/api/v2/sms", requestOptions)
-          .then(response => {
-            if (response.status === 400) {
-              response.text().then(text => {
-                alert("SMS failed: " + text);
-                console.log(text);
-              });
-            } else {
-              alert("SMS sent successfully!");
-              response.text().then(text => console.log(text));
-            }
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            phone: recipientNumber,
+            message: messageBody
           })
-          .catch((error) => {
-            console.log("error", error);
-            alert("Failed to send SMS. " + error.message);
-          });
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert("SMS sent successfully!");
+          } else {
+            alert("SMS failed: " + data.error);
+          }
+        })
+        .catch((error) => {
+          console.log("error", error);
+          alert("Failed to send SMS. " + error.message);
+        });
       };
     </script>
   </body>
