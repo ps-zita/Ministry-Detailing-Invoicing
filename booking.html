@@ -254,15 +254,16 @@
         };
 
         if (isEdited) {
-          document.getElementById("company-name").textContent = data.company_name;
-          document.getElementById("company-phone").textContent = data.company_phone;
-          document.getElementById("client-name").textContent = data.client_name;
-          document.getElementById("client-phone").textContent = data.client_phone;
-          document.getElementById("inv-number").textContent = data.inv_number;
-          document.getElementById("inv-date").textContent = data.inv_date;
+          const parsedInvoiceData = JSON.parse(data.invoice_data);
+          document.getElementById("company-name").textContent = parsedInvoiceData.company_name;
+          document.getElementById("company-phone").textContent = parsedInvoiceData.company_phone;
+          document.getElementById("client-name").textContent = parsedInvoiceData.client_name;
+          document.getElementById("client-phone").textContent = parsedInvoiceData.client_phone;
+          document.getElementById("inv-number").textContent = parsedInvoiceData.inv_number;
+          document.getElementById("inv-date").textContent = parsedInvoiceData.inv_date;
 
           let invoiceRows = "";
-          data.invoice_lines.forEach(line => {
+          parsedInvoiceData.invoice_lines.forEach(line => {
             invoiceRows += `
               <tr>
                 <td>${line.description}</td>
@@ -273,8 +274,8 @@
             `;
           });
           document.getElementById("invoice-lines").innerHTML = invoiceRows;
-          document.getElementById("total-due").textContent = data.total_due;
-          document.querySelector('.bank-details').innerHTML = data.bank_details;
+          document.getElementById("total-due").textContent = parsedInvoiceData.total_due;
+          document.querySelector('.bank-details').innerHTML = parsedInvoiceData.bank_details;
 
         } else {
           // Original booking data rendering
